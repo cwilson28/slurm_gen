@@ -1,0 +1,258 @@
+package main
+
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+)
+
+type BatchParams struct {
+	JobName           string
+	Partition         string
+	NotificationBegin bool
+	NotificationEnd   bool
+	NotificationFail  bool
+	NotificationEmail string
+	Tasks             int64
+	CPUs              int64
+	Memory            int64
+	Time              string
+}
+
+func (bp *BatchParams) NotificationType() string {
+	var notifications = ""
+
+	// Add BEGIN tag
+	if bp.NotificationBegin {
+		notifications = "BEGIN"
+	}
+
+	// Add END tag
+	if bp.NotificationEnd {
+		if notifications == "" {
+			notifications = "END"
+		} else {
+			notifications += ",END"
+		}
+	}
+
+	// Add FAIL tag
+	if bp.NotificationFail {
+		if notifications == "" {
+			notifications = "FAIL"
+		} else {
+			notifications += ",FAIL"
+		}
+	}
+
+	// Set NONE tag if no options set.
+	if notifications == "" {
+		notifications = "NONE"
+	}
+	return notifications
+}
+
+type JobParams struct {
+	SingularityPath  string
+	SingularityImage string
+	WorkDir          string
+	Volume           string
+	Command          string
+	CommandOptions   []string
+}
+
+var SLURM_PREAMBLE = map[string]string{
+	"header":        "#!/bin/bash",
+	"job_name":      "#SBATCH --job-name=%s",
+	"partition":     "#SBATCH --partition=%s",
+	"notifications": "#SBATCH --mail-type=%s",
+	"email":         "#SBATCH --mail-user=%s",
+	"tasks":         "#SBATCH --ntasks=%d",
+	"cpus":          "#SBATCH --cpus-per-task=%d",
+	"memory":        "#SBATCH --mem=%d",
+	"time":          "#SBATCH --time=%s",
+	"job_log":       "#SBATCH --output=%s_%%j.log",
+}
+
+var JOB_PREAMBLE = []string{
+	"",
+	`echo "====================================================="`,
+	"pwd; hostname; date",
+	`echo "====================================================="`,
+	"",
+	"# Load the singularity module",
+	"module load singularity",
+	"export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH",
+	"",
+}
+
+var JOB_SHIT = map[string]string{
+	"singularity_cmd":  "singularity run \\",
+	"singularity_bind": "--bind %s:/compbio \\",
+	"singularity_env":  "%s/%s \\",
+	"command":          "%s \\",
+}
+
+func ScriptGen(paramFile string) {
+	var slurmParams = BatchParams{}
+	var jobParams = JobParams{}
+
+	// Open the file for buffer based read.
+	fileBuf, err := os.Open(paramFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Defer file handle closing.
+	defer func() {
+		if err = fileBuf.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	// Create a file scanner for reading the lines of the file.
+	fileScanner := bufio.NewScanner(fileBuf)
+
+	// Read the file line by line.
+	for fileScanner.Scan() {
+		line := fileScanner.Text()
+		if ignoreLine(line) {
+			continue
+		} else {
+			parseLine(line, &slurmParams, &jobParams)
+		}
+
+	}
+	err = fileScanner.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	writeSlurmScript(slurmParams, jobParams)
+}
+
+func ignoreLine(l string) bool {
+	if l == "" || strings.Contains(l, "#") {
+		return true
+	}
+	return false
+}
+
+func parseLine(l string, batchParams *BatchParams, jobParams *JobParams) {
+	lineChunks := strings.Split(l, "=")
+	if lineChunks[0] == "JOB_NAME" {
+		batchParams.JobName = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "PARTITION" {
+		batchParams.Partition = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "NOTIFICATION_BEGIN" {
+		batchParams.NotificationBegin, _ = strconv.ParseBool(cleanLine(lineChunks[1]))
+	} else if lineChunks[0] == "NOTIFICATION_END" {
+		batchParams.NotificationEnd, _ = strconv.ParseBool(cleanLine(lineChunks[1]))
+	} else if lineChunks[0] == "NOTIFICATION_FAIL" {
+		batchParams.NotificationFail, _ = strconv.ParseBool(cleanLine(lineChunks[1]))
+	} else if lineChunks[0] == "NOTIFICATION_EMAIL" {
+		batchParams.NotificationEmail = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "TASKS" {
+		batchParams.Tasks, _ = strconv.ParseInt(cleanLine(lineChunks[1]), 10, 64)
+	} else if lineChunks[0] == "CPUS" {
+		batchParams.CPUs, _ = strconv.ParseInt(cleanLine(lineChunks[1]), 10, 64)
+	} else if lineChunks[0] == "MEMORY" {
+		batchParams.Memory, _ = strconv.ParseInt(cleanLine(lineChunks[1]), 10, 64)
+	} else if lineChunks[0] == "SINGULARITY_PATH" {
+		jobParams.SingularityPath = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "SINGULARITY_IMAGE" {
+		jobParams.SingularityImage = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "WORK_DIR" {
+		jobParams.WorkDir = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "VOLUME" {
+		jobParams.Volume = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "COMMAND" {
+		jobParams.Command = cleanLine(lineChunks[1])
+	} else if lineChunks[0] == "COMMAND_OPTION" {
+		jobParams.CommandOptions = append(jobParams.CommandOptions, cleanLine(lineChunks[1]))
+	}
+
+}
+
+func cleanLine(l string) string {
+	chunks := strings.Split(l, ";;")
+	// We want everything up to the comment delimiter
+	return strings.TrimRight(chunks[0], " ")
+}
+
+func writeSlurmScript(bp BatchParams, jp JobParams) {
+	filename := fmt.Sprintf("%s.slurm", bp.JobName)
+	outfile, err := os.Create(filename)
+	if err != nil {
+		fmt.Println(err)
+		outfile.Close()
+		return
+	}
+
+	// Write the slurm script header.
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", SLURM_PREAMBLE["header"]))
+
+	// Write the rest of the preamble.
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["job_name"], bp.JobName)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["partition"], bp.Partition)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["notifications"], bp.NotificationType())))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["email"], bp.NotificationEmail)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["tasks"], bp.Tasks)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["cpus"], bp.CPUs)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["memory"], bp.Memory)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(SLURM_PREAMBLE["job_log"], bp.JobName)))
+
+	// Write intermediary job shit.
+	for _, line := range JOB_PREAMBLE {
+		fmt.Fprintln(outfile, line)
+	}
+
+	// Write job shit.
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", JOB_SHIT["singularity_cmd"]))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(JOB_SHIT["singularity_bind"], jp.Volume)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(JOB_SHIT["singularity_env"], jp.SingularityPath, jp.SingularityImage)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(JOB_SHIT["command"], jp.Command)))
+
+	// Write all command options.
+	for _, opt := range jp.CommandOptions {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s \\", opt))
+	}
+
+	err = outfile.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf("%s slurm script written successfully.\n", bp.JobName)
+	return
+}
+
+func main() {
+	flag.String("params", "", "Full path to job parameter file")
+	flag.Bool("submit", false, "Submit job on the user's behalf")
+	flag.Parse()
+
+	// Check for the param file flag
+	paramFile := flag.Lookup("params")
+	if paramFile == nil {
+		fmt.Println("Error: Missing parameter file. Please include --params <path to your paramter file>")
+		os.Exit(1)
+	}
+
+	// Generate slurm script based on supplied parameters
+	ScriptGen(paramFile.Value.String())
+
+	// Check for submit flag
+	submitFlag := flag.Lookup("submit")
+	if submitFlag == nil {
+		os.Exit(0)
+	}
+
+	// Submit the job.
+
+}
