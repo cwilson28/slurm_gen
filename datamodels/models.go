@@ -20,6 +20,7 @@ type ToolParams struct {
 	Volume           string
 	Command          string
 	CommandOptions   []string
+	CommandArgs      []string
 }
 
 type ScriptDef struct {
