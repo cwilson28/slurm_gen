@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+func ShowHelp() {
+	fmt.Println(datamodels.HELP_MSG)
+}
+
 func ScriptGen(scanner *bufio.Scanner) ([]datamodels.ScriptDef, error) {
 	var scriptDefs = make([]datamodels.ScriptDef, 0)
 	var slurmParams = datamodels.SlurmParams{}
@@ -195,10 +199,19 @@ func writeBashScript(def datamodels.ScriptDef) (string, error) {
 }
 
 func main() {
+
+	flag.Bool("help", false, "Show help message")
 	flag.String("params", "", "Full path to job parameter file")
 	flag.Bool("pipeline", false, "Generate an accompanying pipeline script")
 	flag.Bool("submit", false, "Submit job on the user's behalf")
 	flag.Parse()
+
+	// Check for the help param
+	help := flag.Lookup("help")
+	if help != nil {
+		ShowHelp()
+		os.Exit(1)
+	}
 
 	// Check for the param file flag
 	paramFile := flag.Lookup("params")
@@ -258,6 +271,7 @@ func main() {
 				fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["email"], def.SlurmParams.NotificationEmail)))
 				fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], "pipeline")))
 				fmt.Fprintln(parentSlurmFile)
+
 				// Write intermediary job shit.
 				for _, line := range datamodels.MORE_JOBSHIT {
 					fmt.Fprintln(parentSlurmFile, line)

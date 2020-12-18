@@ -31,3 +31,20 @@ var JOB_SHIT = map[string]string{
 	"singularity_env":  "%s/%s \\",
 	"command":          "%s \\",
 }
+
+var HELP_MSG = `
+	Usage: slurm_gen [--options]
+
+	Summary: slurm_gen is a command line tool for generating scripts to be submitted
+	to the slurm scheduler with sbatch.
+
+	Available Options:
+	
+	--params: full path to the parameters file defining your tool pipeline
+	--pipeline: will invoke the pipeline option and will generate a full pipeline script
+
+	Example usage:
+
+	slurm_gen --params /home/username/fastqc_params.txt
+	Output: fastqc.slurm
+`
