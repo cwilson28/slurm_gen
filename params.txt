@@ -91,59 +91,59 @@ OPTION=--outdir /compbio/analysis/JimCoffman/jcoffman_006.abOnly_cortisol_2018
 ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R1_001.fastq.gz
 ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R2_001.fastq.gz
 
-# Next tool in the pipeline.
-JOB_NAME=trim_galore ;; The name of the job you are running (e.g., trinity)
-TASKS=1 ;; Run the job as a single task.
-CPUS=1 ;; Run the job with n cores (i.e., cpus)
-MEMORY=64 ;; Run the job with m GB of ram
-TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
-
-SINGULARITY_PATH=/home/cwilson/compbio/docker
-SINGULARITY_IMAGE=trimgalore_v0_6_5.sif
-
-VOLUME=/home/cwilson/compbio/
-
-COMMAND=trim_galore
-
-OPTION=--fastqc_args '"--noextract"'
-OPTION=--illumina
-OPTION=--paired
-OPTION=--retain_unpaired
-OPTION=--length_1 35
-OPTION=--length_2 35
-OPTION=--stringency 1
-OPTION=--length 20
-OPTION=--quality 20
-OPTION=--output_dir /compbio/analysis/JimCoffman/jcoffman_006.abOnly_cortisol_2018
-
-ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R1_001.fastq.gz
-ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R2_001.fastq.gz
-
-# Next tool in the pipeline.
-JOB_NAME=star ;; The name of the job you are running (e.g., trinity)
-TASKS=1 ;; Run the job as a single task.
-CPUS=32 ;; Run the job with n cores (i.e., cpus)
-MEMORY=512 ;; Run the job with n GB of ram
-TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
-
-SINGULARITY_PATH=/home/cwilson/compbio/docker
-SINGULARITY_IMAGE=star_v2_7_5.sif
-
-VOLUME=/home/cwilson/compbio/
-COMMAND=STAR
-
-OPTION=--runThreadN 32
-OPTION=--limitBAMsortRAM 512000000000
-OPTION=--outSJfilterReads Unique
-OPTION=--outFilterType BySJout
-OPTION=--outSAMunmapped Within
-OPTION=--outSAMtype BAM SortedByCoordinate
-OPTION=--outBAMcompression 10
-# ONLY SUPPLY THE PATH TO THE OUTPUTFILE. SLURM_GEN WILL INFER THE PREFIX FROM THE READFILE NAMES.
-OPTION=--outFileNamePrefix /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%file-prefix%}
-OPTION=--quantMode TranscriptomeSAM GeneCounts
-OPTION=--quantTranscriptomeBAMcompression 10
-OPTION=--readFilesCommand zcat
-OPTION=--genomeDir /compbio/transformed/STAR-2.7.5c/ensembl/release-101/homo_sapiens-genome
-# LEAVE THE ARGUMENTS TO THIS OPTION BLANK. THEY WILL BE EXTRACTED FROM THE STAR_SAMPLES_FILE.TXT
-OPTION=--readFilesIn /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%readfile_1%} /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%readfile_2%}
+## Next tool in the pipeline.
+#JOB_NAME=trim_galore ;; The name of the job you are running (e.g., trinity)
+#TASKS=1 ;; Run the job as a single task.
+#CPUS=1 ;; Run the job with n cores (i.e., cpus)
+#MEMORY=64 ;; Run the job with m GB of ram
+#TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
+#
+#SINGULARITY_PATH=/home/cwilson/compbio/docker
+#SINGULARITY_IMAGE=trimgalore_v0_6_5.sif
+#
+#VOLUME=/home/cwilson/compbio/
+#
+#COMMAND=trim_galore
+#
+#OPTION=--fastqc_args '"--noextract"'
+#OPTION=--illumina
+#OPTION=--paired
+#OPTION=--retain_unpaired
+#OPTION=--length_1 35
+#OPTION=--length_2 35
+#OPTION=--stringency 1
+#OPTION=--length 20
+#OPTION=--quality 20
+#OPTION=--output_dir /compbio/analysis/JimCoffman/jcoffman_006.abOnly_cortisol_2018
+#
+#ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R1_001.fastq.gz
+#ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R2_001.fastq.gz
+#
+## Next tool in the pipeline.
+#JOB_NAME=star ;; The name of the job you are running (e.g., trinity)
+#TASKS=1 ;; Run the job as a single task.
+#CPUS=32 ;; Run the job with n cores (i.e., cpus)
+#MEMORY=512 ;; Run the job with n GB of ram
+#TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
+#
+#SINGULARITY_PATH=/home/cwilson/compbio/docker
+#SINGULARITY_IMAGE=star_v2_7_5.sif
+#
+#VOLUME=/home/cwilson/compbio/
+#COMMAND=STAR
+#
+#OPTION=--runThreadN 32
+#OPTION=--limitBAMsortRAM 512000000000
+#OPTION=--outSJfilterReads Unique
+#OPTION=--outFilterType BySJout
+#OPTION=--outSAMunmapped Within
+#OPTION=--outSAMtype BAM SortedByCoordinate
+#OPTION=--outBAMcompression 10
+## ONLY SUPPLY THE PATH TO THE OUTPUTFILE. SLURM_GEN WILL INFER THE PREFIX FROM THE READFILE NAMES.
+#OPTION=--outFileNamePrefix /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%file-prefix%}
+#OPTION=--quantMode TranscriptomeSAM GeneCounts
+#OPTION=--quantTranscriptomeBAMcompression 10
+#OPTION=--readFilesCommand zcat
+#OPTION=--genomeDir /compbio/transformed/STAR-2.7.5c/ensembl/release-101/homo_sapiens-genome
+## LEAVE THE ARGUMENTS TO THIS OPTION BLANK. THEY WILL BE EXTRACTED FROM THE STAR_SAMPLES_FILE.TXT
+#OPTION=--readFilesIn /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%readfile_1%} /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%readfile_2%}

@@ -13,6 +13,14 @@ var SLURM_PREAMBLE = map[string]string{
 	"job_log":       "#SBATCH --output=%s_%%j.log",
 }
 
+var COMMAND_PREAMBLE = map[string]string{
+	"job_name": "#SBATCH --job-name=%s",
+	"tasks":    "#SBATCH --ntasks=%d",
+	"cpus":     "#SBATCH --cpus-per-task=%d",
+	"memory":   "#SBATCH --mem=%d",
+	"time":     "#SBATCH --time=%s",
+}
+
 var MORE_JOBSHIT = []string{
 	"",
 	`echo "====================================================="`,

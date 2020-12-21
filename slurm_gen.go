@@ -135,7 +135,6 @@ func JobGen(scanner *bufio.Scanner) (datamodels.Job, error) {
 
 		// Get the line tag and assigned value.
 		tag, val := parseLine(line)
-		fmt.Println(tag, val)
 
 		if (tag == "JOB_NAME") && (lastTag == "ARGUMENT" || lastTag == "OPTION") {
 			// Finalize the command and add command to array once we hit the next command block.
@@ -427,14 +426,44 @@ func writeBashScript(outfile *os.File, command datamodels.Command) (string, erro
 	return filename, nil
 }
 
-func writeSlurmPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble) {
+func writeSlurmPreamble(slurmFile *os.File, jobname string, preamble datamodels.SlurmPreamble) {
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", datamodels.SLURM_PREAMBLE["header"]))
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_name"], "pipeline")))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_name"], jobname)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["partition"], preamble.Partition)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["notifications"], preamble.NotificationType())))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["email"], preamble.NotificationEmail)))
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], "pipeline")))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], jobname)))
 	fmt.Fprintln(slurmFile)
+}
+
+func writeCommandPreamble(slurmFile *os.File, preamble datamodels.CommandPreamble) {
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["tasks"], preamble.Tasks)))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["cpus"], preamble.CPUs)))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["memory"], preamble.Memory)))
+	fmt.Fprintln(slurmFile)
+}
+
+func writeSlurmScript(slurmFile *os.File, job datamodels.Job) {
+	// Write the slurm preamble for the parent slurm script
+	writeSlurmPreamble(slurmFile, job.Commands[0].CommandName, job.SlurmPreamble)
+	// Write the command preamble. We can use Commands[0] since there *should* only be one command.
+	writeCommandPreamble(slurmFile, job.Commands[0].Preamble)
+
+	// Write intermediary job shit.
+	for _, line := range datamodels.MORE_JOBSHIT {
+		fmt.Fprintln(slurmFile, line)
+	}
+
+	// Write command shit.
+	// TODO: Wrap this in a function.
+	command := job.Commands[0]
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], command.CommandParams.Volume)))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], command.CommandParams.SingularityPath, command.CommandParams.SingularityImage)))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+
+	writeCommandOptions(slurmFile, command.CommandParams.CommandOptions)
+	writeCommandArgs(slurmFile, command.CommandParams.CommandArgs)
 }
 
 func main() {
@@ -481,8 +510,6 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%+v\n", job)
-
 	pipelineFlag := flag.Lookup("pipeline")
 	if pipelineFlag.Value.String() == "true" {
 		// Generate a slurm pipeline script composed of the scripts we just generated.
@@ -503,7 +530,7 @@ func main() {
 		}()
 
 		// Write the slurm preamble for the parent slurm script
-		writeSlurmPreamble(parentSlurmFile, job.SlurmPreamble)
+		writeSlurmPreamble(parentSlurmFile, job.Commands[0].CommandName, job.SlurmPreamble)
 
 		// Write intermediary job shit.
 		for _, line := range datamodels.MORE_JOBSHIT {
@@ -534,104 +561,27 @@ func main() {
 				)
 			}
 		}
+	} else {
+		// Generate a slurm script for a single tool.
+		fmt.Println("Generating slurm script...")
+
+		// Open the slurm file. We will name it after the command name.
+		command := job.Commands[0]
+		filename := fmt.Sprintf(fmt.Sprintf("%s.slurm", command.CommandName))
+		slurmFile, err := os.Create(filename)
+		if err != nil {
+			panic(err)
+		}
+
+		defer func() {
+			if err = slurmFile.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		// Write the slurm script
+		writeSlurmScript(slurmFile, job)
 	}
-
-	// if job.Batch {
-	// 	// Get sample files information from job samples file.
-	// 	// samples := ParseSamplesFile(job.SamplesFile)
-
-	// 	// Write the slurm preamble.
-	// 	filename := fmt.Sprintf("parent.slurm")
-	// 	parentSlurmFile, err := os.Create(filename)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	defer func() {
-	// 		if err = parentSlurmFile.Close(); err != nil {
-	// 			log.Fatal(err)
-	// 		}
-	// 	}()
-	// 	writeSlurmPreamble(parentSlurmFile, job.SlurmPreamble)
-
-	// 	// Write the command files
-	// 	for _, c := range job.Commands {
-	// 		if isBatchCmd(c.CommandName, job.BatchCommands) {
-
-	// 		} else {
-	// 			writeBashScript(parentSlurmFile, c)
-	// 		}
-	// 	}
-	// }
-
-	// pipelineFlag := flag.Lookup("pipeline")
-	// if pipelineFlag.Value.String() == "true" {
-	// 	// Generate a slurm pipeline script composed of the scripts we just generated.
-	// 	// The script will use srun and each tool command will be written as a bash script.
-	// 	fmt.Println("Generating pipeline slurm script...")
-
-	// 	// Open the parent slurm file
-	// 	filename := fmt.Sprintf("parent.slurm")
-	// 	parentSlurmFile, err := os.Create(filename)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	for i, def := range job.Commands {
-	// 		// Write the slurm preamble to the parent script.
-	// 		if i == 0 {
-	// 			fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", datamodels.SLURM_PREAMBLE["header"]))
-	// 			fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_name"], "pipeline")))
-	// 			fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["partition"], def.SlurmParams.Partition)))
-	// 			fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["notifications"], def.SlurmParams.NotificationType())))
-	// 			fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["email"], def.SlurmParams.NotificationEmail)))
-	// 			fmt.Fprintln(parentSlurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], "pipeline")))
-	// 			fmt.Fprintln(parentSlurmFile)
-
-	// 			// Write intermediary job shit.
-	// 			for _, line := range datamodels.MORE_JOBSHIT {
-	// 				fmt.Fprintln(parentSlurmFile, line)
-	// 			}
-	// 		}
-
-	// 		if def.Batch {
-	// 			// Get the read files.
-	// 			readFiles := ParseSamplesFile(def.SlurmParams.SamplesFile)
-
-	// 			for _, p := range readFiles {
-
-	// 			}
-	// 			scriptName, err := writeBashScript(def)
-	// 			if err != nil {
-	// 				panic(err)
-	// 			}
-
-	// 			// Write the script line for the tool.
-	// 			fmt.Fprintln(
-	// 				parentSlurmFile,
-	// 				fmt.Sprintf(
-	// 					"srun --input=none -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s",
-	// 					def.SlurmParams.Tasks,
-	// 					def.SlurmParams.CPUs,
-	// 					def.SlurmParams.Tasks,
-	// 					def.SlurmParams.Partition,
-	// 					def.SlurmParams.Memory,
-	// 					scriptName,
-	// 				),
-	// 			)
-
-	// 		}
-
-	// 	}
-	// 	os.Exit(0)
-	// }
-
-	// for _, def := range scriptDefs {
-	// 	fmt.Printf("%+v\n", def)
-	// 	_, err := writeSlurmScript(def)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
 
 	// // Check for submit flag
 	// submitFlag := flag.Lookup("submit")
