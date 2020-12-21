@@ -1,6 +1,9 @@
 package datamodels
 
 type SlurmParams struct {
+	Batch             bool
+	SamplesFile       string
+	SampleFilePrefix  string
 	JobName           string
 	Partition         string
 	NotificationBegin bool
@@ -13,7 +16,23 @@ type SlurmParams struct {
 	Time              string
 }
 
-type ToolParams struct {
+type SlurmPreamble struct {
+	Partition         string
+	NotificationBegin bool
+	NotificationEnd   bool
+	NotificationFail  bool
+	NotificationEmail string
+}
+
+type CommandPreamble struct {
+	JobName string
+	Tasks   int64
+	CPUs    int64
+	Memory  int64
+	Time    string
+}
+
+type CommandParams struct {
 	SingularityPath  string
 	SingularityImage string
 	WorkDir          string
@@ -23,21 +42,42 @@ type ToolParams struct {
 	CommandArgs      []string
 }
 
-type ScriptDef struct {
-	SlurmParams SlurmParams
-	ToolParams  ToolParams
+type Job struct {
+	Batch         bool
+	BatchCommands []string
+	SamplesFile   string
+	SlurmPreamble SlurmPreamble
+	Commands      []Command
 }
 
-func (bp *SlurmParams) NotificationType() string {
+type Command struct {
+	CommandName   string
+	Preamble      CommandPreamble
+	CommandParams CommandParams
+}
+
+type BatchParams struct {
+	SamplePrefix string
+	ForwardReads []string
+	ReverseReads []string
+}
+
+type Sample struct {
+	Prefix          string
+	ForwardReadFile string
+	ReverseReadFile string
+}
+
+func (p *SlurmPreamble) NotificationType() string {
 	var notifications = ""
 
 	// Add BEGIN tag
-	if bp.NotificationBegin {
+	if p.NotificationBegin {
 		notifications = "BEGIN"
 	}
 
 	// Add END tag
-	if bp.NotificationEnd {
+	if p.NotificationEnd {
 		if notifications == "" {
 			notifications = "END"
 		} else {
@@ -46,7 +86,7 @@ func (bp *SlurmParams) NotificationType() string {
 	}
 
 	// Add FAIL tag
-	if bp.NotificationFail {
+	if p.NotificationFail {
 		if notifications == "" {
 			notifications = "FAIL"
 		} else {

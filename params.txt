@@ -1,15 +1,28 @@
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# The following parameters are used to describe the job you are submitting.
+# For example, BATCH=<toolnames> means an instance of each tool (e.g., fastqc, # trim_galore, etc.) will be launched for each read file (or pair of read 
+# files). If batch is specified, a samples file MUST be provided. This is how 
+# slurm_gen will assign read files to the tools invoked.
+# ----------------------------------------------------------------------------
+#BATCH=fastqc,trim_galore,star
+#SAMPLES_FILE=/Users/cwilson/gocode/src/slurm_gen/samples.txt
+
+# ----------------------------------------------------------------------------
+# SLURM PREAMBLE
+# ----------------------------------------------------------------------------
+PARTITION=dgx ;; The name of the partition where you want to run the job.
+NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
+NOTIFICATION_END=true ;; Send email notification when job is finished.
+NOTIFICATION_FAIL=true ;; Send email notification if job fails.
+NOTIFICATION_EMAIL=cwilson@mdibl.org ;; Where to send notifications.
+
+# ----------------------------------------------------------------------------
 # The following parameters are specific to the cluster job you are submitting. 
 # They tell the slurm resource manager how your job should be managed. These
 # are required parameters. Your job may not run if they are not provided. 
 # -----------------------------------------------------------------------------
 
 JOB_NAME=fastqc ;; The name of the job you are running (e.g., trinity)
-PARTITION=dgx ;; The name of the partition where you want to run the job.
-NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
-NOTIFICATION_END=true ;; Send email notification when job is finished.
-NOTIFICATION_FAIL=true ;; Send email notification if job fails.
-NOTIFICATION_EMAIL=cwilson@mdibl.org ;; Where to send notifications.
 TASKS=1 ;; Run the job as a single task.
 CPUS=1 ;; Run the job with n cores (i.e., cpus)
 MEMORY=64 ;; Run the job with m GB of ram
@@ -19,7 +32,6 @@ TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
 # ** those requirements should mirror what you have specified for the job.
 # ** Failure to match the requirements can result in poor job performance and
 # ** inaccurate statistics about your job.
-
 
 # -----------------------------------------------------------------------------
 # The following parameters are used to specify the path and name of the
@@ -69,9 +81,7 @@ COMMAND=fastqc
 # ** and passes it to the tool command being called. Please make sure you include
 # ** the appropriate - or -- option prefix.
 
-
 OPTION=--outdir /compbio/analysis/JimCoffman/jcoffman_006.abOnly_cortisol_2018
-
 
 # -----------------------------------------------------------------------------
 # Command arguments. These will be set and accessed internal to the docker 
@@ -82,12 +92,7 @@ ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL
 ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R2_001.fastq.gz
 
 # Next tool in the pipeline.
-JOB_NAME=trimgalore ;; The name of the job you are running (e.g., trinity)
-PARTITION=dgx ;; The name of the partition where you want to run the job.
-NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
-NOTIFICATION_END=true ;; Send email notification when job is finished.
-NOTIFICATION_FAIL=true ;; Send email notification if job fails.
-NOTIFICATION_EMAIL=cwilson@mdibl.org ;; Where to send notifications.
+JOB_NAME=trim_galore ;; The name of the job you are running (e.g., trinity)
 TASKS=1 ;; Run the job as a single task.
 CPUS=1 ;; Run the job with n cores (i.e., cpus)
 MEMORY=64 ;; Run the job with m GB of ram
@@ -97,6 +102,7 @@ SINGULARITY_PATH=/home/cwilson/compbio/docker
 SINGULARITY_IMAGE=trimgalore_v0_6_5.sif
 
 VOLUME=/home/cwilson/compbio/
+
 COMMAND=trim_galore
 
 OPTION=--fastqc_args '"--noextract"'
@@ -112,3 +118,32 @@ OPTION=--output_dir /compbio/analysis/JimCoffman/jcoffman_006.abOnly_cortisol_20
 
 ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R1_001.fastq.gz
 ARGUMENT=/compbio/data/JimCoffman/jcoffman_006.abOnly_cortisol_2018/0AB1_S1_LALL_R2_001.fastq.gz
+
+# Next tool in the pipeline.
+JOB_NAME=star ;; The name of the job you are running (e.g., trinity)
+TASKS=1 ;; Run the job as a single task.
+CPUS=32 ;; Run the job with n cores (i.e., cpus)
+MEMORY=512 ;; Run the job with n GB of ram
+TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
+
+SINGULARITY_PATH=/home/cwilson/compbio/docker
+SINGULARITY_IMAGE=star_v2_7_5.sif
+
+VOLUME=/home/cwilson/compbio/
+COMMAND=STAR
+
+OPTION=--runThreadN 32
+OPTION=--limitBAMsortRAM 512000000000
+OPTION=--outSJfilterReads Unique
+OPTION=--outFilterType BySJout
+OPTION=--outSAMunmapped Within
+OPTION=--outSAMtype BAM SortedByCoordinate
+OPTION=--outBAMcompression 10
+# ONLY SUPPLY THE PATH TO THE OUTPUTFILE. SLURM_GEN WILL INFER THE PREFIX FROM THE READFILE NAMES.
+OPTION=--outFileNamePrefix /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%file-prefix%}
+OPTION=--quantMode TranscriptomeSAM GeneCounts
+OPTION=--quantTranscriptomeBAMcompression 10
+OPTION=--readFilesCommand zcat
+OPTION=--genomeDir /compbio/transformed/STAR-2.7.5c/ensembl/release-101/homo_sapiens-genome
+# LEAVE THE ARGUMENTS TO THIS OPTION BLANK. THEY WILL BE EXTRACTED FROM THE STAR_SAMPLES_FILE.TXT
+OPTION=--readFilesIn /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%readfile_1%} /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/{%readfile_2%}
