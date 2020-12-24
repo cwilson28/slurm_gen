@@ -94,6 +94,3 @@ OPTION=--readFilesIn /compbio/data/ClaireMoore/cmoore_010.PRJNA449980/SRR6997095
 # container at runtime. Arguments must be expected by the command. Arguments  # can include input file names, etc.
 # -----------------------------------------------------------------------------
 
-ARGUMENT=/home/cwilson/compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/SRR6997096_Aligned.sortedByCoord.out.bam
-ARGUMENT=/home/cwilson/compbio/transformed/STAR-2.7.5c/ensembl/release-101/homo_sapiens-genome
-ARGUMENT=/home/cwilson/compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980

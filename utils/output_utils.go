@@ -85,7 +85,7 @@ func WriteCommandPreamble(slurmFile *os.File, preamble datamodels.CommandPreambl
 	fmt.Fprintln(slurmFile)
 }
 
-/* ---
+/* --
  * Write the command options to file.
  * --- */
 func WriteCommandOptions(outfile *os.File, options []string) {
@@ -93,6 +93,14 @@ func WriteCommandOptions(outfile *os.File, options []string) {
 	for _, opt := range options {
 		fmt.Fprintln(outfile, fmt.Sprintf("%s \\", opt))
 	}
+}
+
+/* --
+ * Write command option.
+ * --- */
+func WriteCommandOption(outfile *os.File, option string) {
+	// Write a single command option to the file
+	fmt.Fprintln(outfile, fmt.Sprintf("%s \\", option))
 }
 
 /* ---

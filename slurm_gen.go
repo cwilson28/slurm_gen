@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"slurm_gen/datamodels"
 	"slurm_gen/utils"
 	"strconv"
@@ -182,7 +183,9 @@ func setCommandPreamble(tag, val string, preamble *datamodels.CommandPreamble) {
 }
 
 func main() {
+	var submit bool
 
+	// Declare command line flags.
 	flag.Bool("help", false, "Show help message")
 	flag.String("params", "", "Full path to job parameter file")
 	flag.Bool("pipeline", false, "Generate an accompanying pipeline script")
@@ -196,6 +199,14 @@ func main() {
 	if help.Value.String() == "true" {
 		ShowHelp()
 		os.Exit(1)
+	}
+
+	/* -------------------------------------------------------------------------
+	 * Check for the help param and display help message if provided.
+	 * ---------------------------------------------------------------------- */
+	submitFlag := flag.Lookup("submit")
+	if submitFlag.Value.String() == "true" {
+		submit = true
 	}
 
 	/* -------------------------------------------------------------------------
@@ -288,6 +299,9 @@ func main() {
 	// Write multiple slurm scripts.
 	if cmd.Batch {
 		fmt.Println("Writing batch files...")
+
+		batchFiles := make([]string, 0)
+
 		// Get the samples over which this command will be run
 		samples := utils.ParseSamplesFile(cmd.SamplesFile)
 
@@ -307,20 +321,50 @@ func main() {
 
 			utils.WriteSlurmPreamble(outfile, strings.TrimRight(filename, ".slurm"), job.SlurmPreamble)
 			utils.WriteCommandPreamble(outfile, cmd.Preamble)
-			// *** The following can be written independent of the actual command. *** //
-			// Write job shit.
+			// Write intermediary job shit.
+			// TODO: Wrap this in a "Write" command in the output_utils file.
+			for _, line := range datamodels.MORE_JOBSHIT {
+				fmt.Fprintln(outfile, line)
+			}
+
+			// TODO: Wrap this in a "Write" command in the output_utils file.
 			fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
 			fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
 			fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
 			fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], cmd.CommandParams.Command)))
 
-			utils.WriteCommandOptions(outfile, cmd.CommandParams.CommandOptions)
+			// TODO: This needs to be wrapped in star options command or something. We will likely
+			// have other tools that require specific option formattin.
+			if cmd.CommandName == "star" {
+				for _, opt := range cmd.CommandParams.CommandOptions {
+					chunks := strings.Split(opt, " ")
+					if chunks[0] == "--outFileNamePrefix" {
+						opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", s.Path, s.Prefix))
+					}
+					if chunks[0] == "--readFilesIn" {
+						opt = fmt.Sprintf("%s %s", chunks[0], s.DumpReadFiles())
+					}
+					utils.WriteCommandOption(outfile, opt)
+				}
+			} else {
+				utils.WriteCommandOptions(outfile, cmd.CommandParams.CommandOptions)
+			}
+
+			// Write any command args that are provided.
 			utils.WriteCommandArgs(outfile, cmd.CommandParams.CommandArgs)
 			fmt.Printf("%s written successfully\n", filename)
-
+			batchFiles = append(batchFiles, filename)
+		}
+		if submit {
+			// Submit the jobs
+			for _, f := range batchFiles {
+				_, err := exec.Command("sbatch", f).Output()
+				if err != nil {
+					fmt.Printf("%s", err)
+				}
+			}
 		}
 		os.Exit(0)
-
 	}
 
 	// Name the slurm file after the command.
@@ -340,9 +384,6 @@ func main() {
 	utils.WriteSlurmScript(outfile, job)
 	fmt.Printf("Slurm script %s written.", filename)
 	os.Exit(0)
-
-	// The command should be run in batch.
-	// Write the parallel batchfiles.
 
 	// // Check for submit flag
 	// submitFlag := flag.Lookup("submit")

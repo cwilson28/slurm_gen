@@ -1,5 +1,7 @@
 package datamodels
 
+import "fmt"
+
 type SlurmParams struct {
 	JobName           string
 	Partition         string
@@ -96,4 +98,13 @@ func (p *SlurmPreamble) NotificationType() string {
 		notifications = "NONE"
 	}
 	return notifications
+}
+
+func (s *Sample) DumpReadFiles() string {
+	readFileString := fmt.Sprintf("%s/%s", s.Path, s.ForwardReadFile)
+	if s.ReverseReadFile != "" {
+		readFileString += fmt.Sprintf(" %s/%s", s.Path, s.ReverseReadFile)
+	}
+
+	return readFileString
 }
