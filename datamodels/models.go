@@ -45,12 +45,11 @@ type Job struct {
 }
 
 type Command struct {
-	Batch            bool
-	SamplesFile      string
-	SampleFilePrefix string
-	CommandName      string
-	Preamble         CommandPreamble
-	CommandParams    CommandParams
+	Batch         bool
+	SamplesFile   string
+	CommandName   string
+	Preamble      CommandPreamble
+	CommandParams CommandParams
 }
 
 type BatchParams struct {
@@ -60,6 +59,7 @@ type BatchParams struct {
 }
 
 type Sample struct {
+	Path            string
 	Prefix          string
 	ForwardReadFile string
 	ReverseReadFile string

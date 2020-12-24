@@ -29,27 +29,31 @@ func ParseSamplesFile(filename string) []datamodels.Sample {
 
 	// Create a file scanner for reading the lines of the file.
 	scanner := bufio.NewScanner(fileBuf)
+	sample := datamodels.Sample{}
 
 	// Read the file line by line.
 	for scanner.Scan() {
 		line := scanner.Text()
+		chunks := strings.Split(line, "=")
+		if chunks[0] == "SAMPLE_PATH" {
+			sample.Path = chunks[1]
+		} else if chunks[0] == "SAMPLE" {
+			// We are assuming the files are separated with a space.
+			fileNames := strings.Split(chunks[1], " ")
 
-		sample := datamodels.Sample{}
-		// We are assuming the files are separated with a space.
-		fileNames := strings.Split(line, " ")
+			// Get the file prefix from the forward read
+			sample.Prefix = ParseSamplePrefix(fileNames[0])
 
-		// Get the file prefix from the forward read
-		sample.Prefix = ParseSamplePrefix(fileNames[0])
+			// Append the forward reads.
+			sample.ForwardReadFile = fileNames[0]
 
-		// Append the forward reads.
-		sample.ForwardReadFile = fileNames[0]
-
-		// Append the reverse reads if provided.
-		if len(fileNames) == 2 {
-			sample.ReverseReadFile = fileNames[1]
+			// Append the reverse reads if provided.
+			if len(fileNames) == 2 {
+				sample.ReverseReadFile = fileNames[1]
+			}
+			samples = append(samples, sample)
+			sample = datamodels.Sample{}
 		}
-
-		samples = append(samples, sample)
 	}
 	return samples
 }

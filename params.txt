@@ -4,9 +4,6 @@
 # are required parameters. Your job may not run if they are not provided. 
 # -----------------------------------------------------------------------------
 
-BATCH=star
-SAMPLES_FILE=./samples.txt
-
 JOB_NAME=star ;; The name of the job you are running (e.g., trinity)
 PARTITION=dgx ;; The name of the partition where you want to run the job.
 NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
@@ -60,6 +57,9 @@ VOLUME=/home/cwilson/compbio/
 # -----------------------------------------------------------------------------
 
 COMMAND=STAR
+BATCH=true
+SAMPLES_FILE=./samples.txt
+
 
 # -----------------------------------------------------------------------------
 # Command options. These will be set and accessed internal to the docker 
