@@ -9,7 +9,7 @@ PARTITION=dgx ;; The name of the partition where you want to run the job.
 NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
 NOTIFICATION_END=true ;; Send email notification when job is finished.
 NOTIFICATION_FAIL=true ;; Send email notification if job fails.
-NOTIFICATION_EMAIL=nmaki@mdibl.org ;; Where to send notifications.
+NOTIFICATION_EMAIL=cwilson@mdibl.org ;; Where to send notifications.
 TASKS=1 ;; Run the job as a single task.
 CPUS=32 ;; Run the job with n cores (i.e., cpus)
 MEMORY=512 ;; Run the job with m GB of ram
@@ -86,7 +86,7 @@ OPTION=--outFileNamePrefix /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/
 OPTION=--quantMode TranscriptomeSAM GeneCounts
 OPTION=--quantTranscriptomeBAMcompression 10
 OPTION=--readFilesCommand zcat
-OPTION=--genomeDir /compbio/transformed/STAR-2.7.5c/ensembl/release-101/homo_sapiens-genome
+OPTION=--genomeDir /compbio/transformed/STAR-2.7.5c/ensembl/release-101/danio_rerio
 OPTION=--readFilesIn /compbio/data/ClaireMoore/cmoore_010.PRJNA449980/SRR6997095_2.fastq.gz /compbio/data/ClaireMoore/cmoore_010.PRJNA449980/SRR6997095_1.fastq.gz
 
 # -----------------------------------------------------------------------------
