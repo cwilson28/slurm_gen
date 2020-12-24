@@ -279,7 +279,11 @@ func main() {
 			)
 
 		}
-	} else {
+		os.Exit(0)
+	} 
+
+
+	else {
 		// Generate a slurm script for a single tool.
 		fmt.Println("Generating slurm script...")
 
