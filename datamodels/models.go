@@ -1,9 +1,6 @@
 package datamodels
 
 type SlurmParams struct {
-	Batch             bool
-	SamplesFile       string
-	SampleFilePrefix  string
 	JobName           string
 	Partition         string
 	NotificationBegin bool
@@ -43,17 +40,17 @@ type CommandParams struct {
 }
 
 type Job struct {
-	Batch         bool
-	BatchCommands []string
-	SamplesFile   string
 	SlurmPreamble SlurmPreamble
 	Commands      []Command
 }
 
 type Command struct {
-	CommandName   string
-	Preamble      CommandPreamble
-	CommandParams CommandParams
+	Batch            bool
+	SamplesFile      string
+	SampleFilePrefix string
+	CommandName      string
+	Preamble         CommandPreamble
+	CommandParams    CommandParams
 }
 
 type BatchParams struct {

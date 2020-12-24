@@ -4,14 +4,17 @@
 # are required parameters. Your job may not run if they are not provided. 
 # -----------------------------------------------------------------------------
 
-JOB_NAME=rsem ;; The name of the job you are running (e.g., trinity)
+BATCH=star
+SAMPLES_FILE=./samples.txt
+
+JOB_NAME=star ;; The name of the job you are running (e.g., trinity)
 PARTITION=dgx ;; The name of the partition where you want to run the job.
 NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
 NOTIFICATION_END=true ;; Send email notification when job is finished.
 NOTIFICATION_FAIL=true ;; Send email notification if job fails.
 NOTIFICATION_EMAIL=nmaki@mdibl.org ;; Where to send notifications.
 TASKS=1 ;; Run the job as a single task.
-CPUS=8 ;; Run the job with n cores (i.e., cpus)
+CPUS=32 ;; Run the job with n cores (i.e., cpus)
 MEMORY=512 ;; Run the job with m GB of ram
 TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
 
@@ -28,7 +31,7 @@ TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
 # -----------------------------------------------------------------------------
 
 SINGULARITY_PATH=/home/cwilson/compbio/docker
-SINGULARITY_IMAGE=rsem_v1_3_3.sif
+SINGULARITY_IMAGE=star_v2_7_5.sif
 
 # -----------------------------------------------------------------------------
 # The following is optional. Uncomment to override the working directory 
@@ -49,14 +52,14 @@ SINGULARITY_IMAGE=rsem_v1_3_3.sif
 # path.
 # -----------------------------------------------------------------------------
 
-VOLUME=/home/nmaki/compbio/
+VOLUME=/home/cwilson/compbio/
 
 # -----------------------------------------------------------------------------
 # The following is required and is a declaration of the command you want to
 # execute (e.g., trinity, fastqc, etc.).
 # -----------------------------------------------------------------------------
 
-COMMAND=rsem
+COMMAND=STAR
 
 # -----------------------------------------------------------------------------
 # Command options. These will be set and accessed internal to the docker 
@@ -70,15 +73,21 @@ COMMAND=rsem
 # ** the appropriate - or -- option prefix.
 
 
-OPTION= rsem-calculate-expression
-OPTION= --keep-intermediate-files
-OPTION= --paired-end
-OPTION= -p 8
-OPTION= --estimate-rspd
-OPTION= --append-names
-OPTION= --output-genome-bam
-OPTION= --bam
+OPTION=--runThreadN 32
+OPTION=--limitBAMsortRAM 512000000000
+OPTION=--outSJfilterReads Unique
+OPTION=--outFilterType BySJout
+OPTION=--outSAMunmapped Within
+OPTION=--outSAMtype BAM SortedByCoordinate
+OPTION=--outBAMcompression 10
 
+# For this particular STAR option, don't provide the actual prefix. It will be extracted from the batch arguments. ONLY PROVIDE THE PATH.
+OPTION=--outFileNamePrefix /compbio/analysis/ClaireMoore/cmoore_010.PRJNA449980/
+OPTION=--quantMode TranscriptomeSAM GeneCounts
+OPTION=--quantTranscriptomeBAMcompression 10
+OPTION=--readFilesCommand zcat
+OPTION=--genomeDir /compbio/transformed/STAR-2.7.5c/ensembl/release-101/homo_sapiens-genome
+OPTION=--readFilesIn /compbio/data/ClaireMoore/cmoore_010.PRJNA449980/SRR6997095_2.fastq.gz /compbio/data/ClaireMoore/cmoore_010.PRJNA449980/SRR6997095_1.fastq.gz
 
 # -----------------------------------------------------------------------------
 # Command arguments. These will be set and accessed internal to the docker 
