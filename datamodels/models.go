@@ -61,7 +61,8 @@ type BatchParams struct {
 }
 
 type Sample struct {
-	Path            string
+	SamplePath      string
+	OutputPath      string
 	Prefix          string
 	ForwardReadFile string
 	ReverseReadFile string
@@ -101,9 +102,9 @@ func (p *SlurmPreamble) NotificationType() string {
 }
 
 func (s *Sample) DumpReadFiles() string {
-	readFileString := fmt.Sprintf("%s/%s", s.Path, s.ForwardReadFile)
+	readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ForwardReadFile)
 	if s.ReverseReadFile != "" {
-		readFileString += fmt.Sprintf(" %s/%s", s.Path, s.ReverseReadFile)
+		readFileString += fmt.Sprintf(" %s/%s", s.SamplePath, s.ReverseReadFile)
 	}
 
 	return readFileString

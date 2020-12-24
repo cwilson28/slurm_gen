@@ -327,6 +327,8 @@ func main() {
 				fmt.Fprintln(outfile, line)
 			}
 
+			fmt.Fprintln(outfile, "ulimit -n 10000")
+
 			// TODO: Wrap this in a "Write" command in the output_utils file.
 			fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
 			fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
@@ -339,7 +341,7 @@ func main() {
 				for _, opt := range cmd.CommandParams.CommandOptions {
 					chunks := strings.Split(opt, " ")
 					if chunks[0] == "--outFileNamePrefix" {
-						opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", s.Path, s.Prefix))
+						opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", s.OutputPath, s.Prefix))
 					}
 					if chunks[0] == "--readFilesIn" {
 						opt = fmt.Sprintf("%s %s", chunks[0], s.DumpReadFiles())
