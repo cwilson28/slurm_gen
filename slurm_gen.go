@@ -260,44 +260,83 @@ func main() {
 		}()
 
 		// Write the slurm preamble for the parent slurm script
-		utils.WriteSlurmPreamble(parentSlurmFile, job.Commands[0].CommandName, job.SlurmPreamble)
+		utils.WriteSlurmPreamble(parentSlurmFile, "pipeline", job.SlurmPreamble)
 
 		// Write intermediary job shit.
 		for _, line := range datamodels.MORE_JOBSHIT {
 			fmt.Fprintln(parentSlurmFile, line)
 		}
 
-		// Write the command files
-		for _, c := range job.Commands {
-			bashScript, err := utils.WriteBashScript(parentSlurmFile, c)
-			if err != nil {
-				panic(err)
-			}
-			// Write the script line for the tool.
-			fmt.Fprintln(
-				parentSlurmFile,
-				fmt.Sprintf(
-					"srun --input=none -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s",
-					c.Preamble.Tasks,
-					c.Preamble.CPUs,
-					c.Preamble.Tasks,
-					job.SlurmPreamble.Partition,
-					c.Preamble.Memory,
-					bashScript,
-				),
-			)
+		// Write the bash scripts for the pipeline commands
+		for _, cmd := range job.Commands {
+			if cmd.Batch {
+				// Get the samples over which this command will be run
+				samples := utils.ParseSamplesFile(cmd.SamplesFile)
+				for _, sample := range samples {
+					// Write a bash script for each sample.
+					filename := fmt.Sprintf("%s_%s.sh", cmd.CommandName, sample.Prefix)
+					outfile, err := os.Create(filename)
+					if err != nil {
+						panic(err)
+					}
 
+					defer func() {
+						if err = outfile.Close(); err != nil {
+							log.Fatal(err)
+						}
+					}()
+
+					bashScript, err := utils.WriteBatchBashScript(outfile, cmd, sample)
+					// Write the script line for the tool.
+					fmt.Fprintln(
+						parentSlurmFile,
+						fmt.Sprintf(
+							"srun --input=none -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
+							cmd.Preamble.Tasks,
+							cmd.Preamble.CPUs,
+							cmd.Preamble.Tasks,
+							job.SlurmPreamble.Partition,
+							cmd.Preamble.Memory,
+							bashScript,
+						),
+					)
+				}
+
+			} else {
+				bashScript, err := utils.WriteBashScript(parentSlurmFile, cmd)
+				if err != nil {
+					panic(err)
+				}
+				// Write the script line for the tool.
+				fmt.Fprintln(
+					parentSlurmFile,
+					fmt.Sprintf(
+						"srun --input=none -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s",
+						cmd.Preamble.Tasks,
+						cmd.Preamble.CPUs,
+						cmd.Preamble.Tasks,
+						job.SlurmPreamble.Partition,
+						cmd.Preamble.Memory,
+						bashScript,
+					),
+				)
+			}
 		}
 		os.Exit(0)
 	}
-	// Generate a slurm script for a single tool.
-	fmt.Println("Generating slurm script...")
+
+	// If pipeline was not specified, we can assume slurm gen is being run for a
+	// single command. Grab the first command from the array.
 
 	cmd := job.Commands[0]
+
+	// Generate a slurm script for a single tool.
+	fmt.Printf("Generating slurm script for %s...\n", cmd.CommandName)
 
 	// This is a batch command.
 	// Write multiple slurm scripts.
 	if cmd.Batch {
+		fmt.Printf("%s will be run in batch mode.\n", cmd.CommandName)
 		fmt.Println("Writing batch files...")
 
 		batchFiles := make([]string, 0)

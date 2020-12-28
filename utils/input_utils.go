@@ -96,6 +96,9 @@ func ParseBatchOpt(batchCommands string) (bool, []string) {
  * --- */
 func ParseLine(l string) (string, string) {
 	lineChunks := strings.Split(l, "=")
+	if len(lineChunks) == 1 {
+		return lineChunks[0], ""
+	}
 	return lineChunks[0], CleanLine(lineChunks[1])
 }
 

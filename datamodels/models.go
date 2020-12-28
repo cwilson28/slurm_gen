@@ -109,3 +109,16 @@ func (s *Sample) DumpReadFiles() string {
 
 	return readFileString
 }
+
+func (s *Sample) DumpForwardReadFile() string {
+	readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ForwardReadFile)
+	return readFileString
+}
+
+func (s *Sample) DumpReverseReadFile() string {
+	if s.ReverseReadFile != "" {
+		readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ReverseReadFile)
+		return readFileString
+	}
+	return ""
+}

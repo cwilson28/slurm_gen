@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"slurm_gen/datamodels"
+	"strings"
 )
 
 /* -----------------------------------------------------------------------------
@@ -62,6 +63,64 @@ func WriteBashScript(outfile *os.File, command datamodels.Command) (string, erro
 	return filename, nil
 }
 
+func WriteBatchBashScript(outfile *os.File, command datamodels.Command, sample datamodels.Sample) (string, error) {
+	filename := fmt.Sprintf("%s_%s.sh", command.CommandName, sample.Prefix)
+	outfile, err := os.Create(filename)
+	if err != nil {
+		return filename, err
+	}
+
+	// *** The following can be written independent of the actual command. *** //
+	// Write the script header.
+	fmt.Fprintln(outfile, fmt.Sprintf("#!/bin/bash\n"))
+	fmt.Fprintln(outfile, "ulimit -n 10000")
+
+	// Write job shit.
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], command.CommandParams.Volume)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], command.CommandParams.SingularityPath, command.CommandParams.SingularityImage)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+
+	// TODO: This needs to be wrapped in star options command or something. We will likely
+	// have other tools that require specific option formattin.
+	if command.CommandName == "star" {
+		for _, opt := range command.CommandParams.CommandOptions {
+			chunks := strings.Split(opt, " ")
+			if chunks[0] == "--outFileNamePrefix" {
+				opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
+			}
+			if chunks[0] == "--readFilesIn" {
+				opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
+			}
+			WriteCommandOption(outfile, opt)
+		}
+	} else if command.CommandName == "trim_galore" {
+		for _, opt := range command.CommandParams.CommandOptions {
+			chunks := strings.Split(opt, " ")
+			if chunks[0] == "--output_dir" {
+				opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s", sample.OutputPath))
+			}
+			WriteCommandOption(outfile, opt)
+		}
+	} else {
+		WriteCommandOptions(outfile, command.CommandParams.CommandOptions)
+	}
+
+	if command.CommandName == "trim_galore" {
+		// Write the forward read file arg to the script.
+		WriteCommandArg(outfile, sample.DumpForwardReadFile())
+		// Write the reverse read file arg to the script.
+		WriteCommandArg(outfile, sample.DumpReverseReadFile())
+	} else {
+		WriteCommandArgs(outfile, command.CommandParams.CommandArgs)
+	}
+
+	outfile.Close()
+	fmt.Printf("%s written successfully\n", filename)
+	return filename, nil
+
+}
+
 /* ---
  * Write the slurm preamble to a .slurm file.
  * --- */
@@ -111,4 +170,9 @@ func WriteCommandArgs(outfile *os.File, args []string) {
 	for _, opt := range args {
 		fmt.Fprintln(outfile, fmt.Sprintf("%s \\", opt))
 	}
+}
+
+func WriteCommandArg(outfile *os.File, arg string) {
+	// Write a single command arg.
+	fmt.Fprintln(outfile, fmt.Sprintf("%s \\", arg))
 }
