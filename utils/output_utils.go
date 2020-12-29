@@ -115,10 +115,10 @@ func WriteBatchBashScript(outfile *os.File, command datamodels.Command, sample d
 		// First, we will write the readfiles argument.
 		// We want trimmed reads here. So drop the file extention from the readfile name.
 		noExt := true
-		forwardReads := fmt.Sprintf("%s/%s_.trimmed.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
-		reverseReads := fmt.Sprintf("%s/%s_.trimmed.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
-		readFilesArg := fmt.Sprintf("%s %s", forwardReads, reverseReads)
-		WriteCommandArg(outfile, readFilesArg)
+		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+		WriteCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
+		WriteCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
 
 		// Next we will write the reference argument. This will be supplied in the params.txt file
 		WriteCommandArgs(outfile, command.CommandParams.CommandArgs)

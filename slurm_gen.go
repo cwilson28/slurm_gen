@@ -300,6 +300,10 @@ func main() {
 							bashScript,
 						),
 					)
+					// Make the bash script executable.
+					if err = os.Chmod(bashScript, 0755); err != nil {
+						fmt.Println(err)
+					}
 				}
 
 			} else {
