@@ -108,9 +108,24 @@ func WriteBatchBashScript(outfile *os.File, command datamodels.Command, sample d
 
 	if command.CommandName == "trim_galore" {
 		// Write the forward read file arg to the script.
-		WriteCommandArg(outfile, sample.DumpForwardReadFile())
+		WriteCommandArg(outfile, sample.DumpForwardReadFileWithPath())
 		// Write the reverse read file arg to the script.
-		WriteCommandArg(outfile, sample.DumpReverseReadFile())
+		WriteCommandArg(outfile, sample.DumpReverseReadFileWithPath())
+	} else if command.CommandName == "rsem-calculate-expression" {
+		// First, we will write the readfiles argument.
+		// We want trimmed reads here. So drop the file extention from the readfile name.
+		noExt := true
+		forwardReads := fmt.Sprintf("%s/%s_.trimmed.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+		reverseReads := fmt.Sprintf("%s/%s_.trimmed.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+		readFilesArg := fmt.Sprintf("%s %s", forwardReads, reverseReads)
+		WriteCommandArg(outfile, readFilesArg)
+
+		// Next we will write the reference argument. This will be supplied in the params.txt file
+		WriteCommandArgs(outfile, command.CommandParams.CommandArgs)
+
+		// Write the samplename arg
+		sampleNameArg := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
+		WriteCommandArg(outfile, sampleNameArg)
 	} else {
 		WriteCommandArgs(outfile, command.CommandParams.CommandArgs)
 	}
@@ -175,4 +190,9 @@ func WriteCommandArgs(outfile *os.File, args []string) {
 func WriteCommandArg(outfile *os.File, arg string) {
 	// Write a single command arg.
 	fmt.Fprintln(outfile, fmt.Sprintf("%s \\", arg))
+}
+
+func WriteWait(outfile *os.File) {
+	// Write a single command arg.
+	fmt.Fprintln(outfile, "wait")
 }

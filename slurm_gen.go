@@ -291,7 +291,7 @@ func main() {
 					fmt.Fprintln(
 						parentSlurmFile,
 						fmt.Sprintf(
-							"srun --input=none -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
+							"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
 							cmd.Preamble.Tasks,
 							cmd.Preamble.CPUs,
 							cmd.Preamble.Tasks,
@@ -311,7 +311,7 @@ func main() {
 				fmt.Fprintln(
 					parentSlurmFile,
 					fmt.Sprintf(
-						"srun --input=none -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s",
+						"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s",
 						cmd.Preamble.Tasks,
 						cmd.Preamble.CPUs,
 						cmd.Preamble.Tasks,
@@ -321,6 +321,7 @@ func main() {
 					),
 				)
 			}
+			utils.WriteWait(parentSlurmFile)
 		}
 		os.Exit(0)
 	}

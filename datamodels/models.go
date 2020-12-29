@@ -1,6 +1,9 @@
 package datamodels
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type SlurmParams struct {
 	JobName           string
@@ -110,15 +113,30 @@ func (s *Sample) DumpReadFiles() string {
 	return readFileString
 }
 
-func (s *Sample) DumpForwardReadFile() string {
+func (s *Sample) DumpForwardReadFile(noext bool) string {
+	if noext {
+		// Drop the file extension from the name
+		chunks := strings.Split(s.ForwardReadFile, ".fastq")
+		return chunks[0]
+	}
+	return s.ForwardReadFile
+}
+
+func (s *Sample) DumpForwardReadFileWithPath() string {
 	readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ForwardReadFile)
 	return readFileString
 }
 
-func (s *Sample) DumpReverseReadFile() string {
-	if s.ReverseReadFile != "" {
-		readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ReverseReadFile)
-		return readFileString
+func (s *Sample) DumpReverseReadFile(noext bool) string {
+	if noext {
+		// Drop the file extension from the name
+		chunks := strings.Split(s.ReverseReadFile, ".fastq")
+		return chunks[0]
 	}
-	return ""
+	return s.ReverseReadFile
+}
+
+func (s *Sample) DumpReverseReadFileWithPath() string {
+	readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ReverseReadFile)
+	return readFileString
 }
