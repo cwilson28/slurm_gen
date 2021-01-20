@@ -5,17 +5,15 @@
 # -----------------------------------------------------------------------------
 
 PARTITION=dgx ;; The name of the partition where you want to run the job.
-NOTIFICATION_BEGIN=true ;; Send email notification when job starts.
+NOTIFICATION_BEGIN=true ;; Send email notification when job trim_galorets.
 NOTIFICATION_END=true ;; Send email notification when job is finished.
 NOTIFICATION_FAIL=true ;; Send email notification if job fails.
 NOTIFICATION_EMAIL=cwilson@mdibl.org ;; Where to send notifications.
 
-# -----------------------------------------------------------------------------
-# First command in the pipeline
-JOB_NAME=rsem ;; The name of the job you are running (e.g., trinity)
+JOB_NAME=kallisto ;; The name of the job you are running (e.g., trinity)
 TASKS=1 ;; Run the job as a single task.
-CPUS=32 ;; Run the job with n cores (i.e., cpus)
-MEMORY=512 ;; Run the job with m GB of ram
+CPUS=8 ;; Run the job with n cores (i.e., cpus)
+MEMORY=128 ;; Run the job with m GB of ram
 TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
 
 # ** Please note, when a tool accepts cpu and/or memory limits or requirements,
@@ -31,7 +29,7 @@ TIME=24:00:00 ;; Time limit in hrs:min:sec (e.g., 24:00:00)
 # -----------------------------------------------------------------------------
 
 SINGULARITY_PATH=/home/cwilson/compbio/docker
-SINGULARITY_IMAGE=rsem_v1_3_3.sif
+SINGULARITY_IMAGE=kallisto_v0_46_1.sif
 
 # -----------------------------------------------------------------------------
 # The following is optional. Uncomment to override the working directory 
@@ -59,7 +57,10 @@ VOLUME=/home/cwilson/compbio/
 # execute (e.g., trinity, fastqc, etc.).
 # -----------------------------------------------------------------------------
 
-COMMAND=rsem-prepare-reference
+COMMAND=kallisto
+SUBCOMMAND=quant
+BATCH
+SAMPLES_FILE=./smcc_samples.txt
 
 # -----------------------------------------------------------------------------
 # Command options. These will be set and accessed internal to the docker 
@@ -72,17 +73,5 @@ COMMAND=rsem-prepare-reference
 # ** and passes it to the tool command being called. Please make sure you include
 # ** the appropriate - or -- option prefix.
 
-OPTION=--gtf /compbio/reference/ensembl/release-101/danio_rerio/gtf/Danio_rerio.GRCz11.101.gtf
-OPTION=--star
-OPTION=--starsjdboverhang 100
-OPTION=--num-threads 32
-
-# -----------------------------------------------------------------------------
-# Command arguments. These will be set and accessed internal to the docker 
-# container at runtime. Arguments must be expected by the command. Arguments  # can include input file names, etc.
-# -----------------------------------------------------------------------------
-
-ARGUMENT=/compbio/reference/ensembl/release-101/danio_rerio-genome/dna
-ARGUMENT=/compbio/transformed/RSEM-1.3.3/ensembl/release-101/danio_rerio
-
-# --- Next command in the pipeline
+OPTION=--index /compbio/transformed/kallisto/axolotl_Am_34.longer300bp_transcriptome_index.idx
+OPTION=--output-dir /compbio/analysis/smcc/smcc_sra/kallisto ;; where you want kallisto to write the quantification results.

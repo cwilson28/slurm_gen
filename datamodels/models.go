@@ -6,32 +6,22 @@ import (
 )
 
 type SlurmParams struct {
-	JobName           string
-	Partition         string
-	NotificationBegin bool
-	NotificationEnd   bool
-	NotificationFail  bool
-	NotificationEmail string
-	Tasks             int64
-	CPUs              int64
-	Memory            int64
-	Time              string
 }
 
 type SlurmPreamble struct {
-	Partition         string
-	NotificationBegin bool
-	NotificationEnd   bool
-	NotificationFail  bool
-	NotificationEmail string
+	JobName      string
+	Partition    string
+	EmailBegin   bool
+	EmailEnd     bool
+	EmailFail    bool
+	EmailAddress string
+	WallTime     string
 }
 
 type CommandPreamble struct {
-	JobName string
-	Tasks   int64
-	CPUs    int64
-	Memory  int64
-	Time    string
+	Tasks  int64
+	CPUs   int64
+	Memory int64
 }
 
 type CommandParams struct {
@@ -40,6 +30,7 @@ type CommandParams struct {
 	WorkDir          string
 	Volume           string
 	Command          string
+	Subcommand       string
 	CommandOptions   []string
 	CommandArgs      []string
 }
@@ -47,6 +38,7 @@ type CommandParams struct {
 type Job struct {
 	SlurmPreamble SlurmPreamble
 	Commands      []Command
+	SamplesFile   string
 }
 
 type Command struct {
@@ -71,16 +63,34 @@ type Sample struct {
 	ReverseReadFile string
 }
 
+func (j *Job) IsPipeline() bool {
+	if len(j.Commands) > 1 {
+		return true
+	}
+	return false
+}
+
+func (j *Job) MaxCPUUsage() int64 {
+	var maxCPU = int64(0)
+
+	for _, cmd := range j.Commands {
+		if cmd.Preamble.CPUs > maxCPU {
+			maxCPU = cmd.Preamble.CPUs
+		}
+	}
+	return maxCPU
+}
+
 func (p *SlurmPreamble) NotificationType() string {
 	var notifications = ""
 
 	// Add BEGIN tag
-	if p.NotificationBegin {
+	if p.EmailBegin {
 		notifications = "BEGIN"
 	}
 
 	// Add END tag
-	if p.NotificationEnd {
+	if p.EmailEnd {
 		if notifications == "" {
 			notifications = "END"
 		} else {
@@ -89,7 +99,7 @@ func (p *SlurmPreamble) NotificationType() string {
 	}
 
 	// Add FAIL tag
-	if p.NotificationFail {
+	if p.EmailFail {
 		if notifications == "" {
 			notifications = "FAIL"
 		} else {

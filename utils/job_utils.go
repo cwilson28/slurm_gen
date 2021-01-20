@@ -1,0 +1,396 @@
+package utils
+
+import (
+	"bufio"
+	"commander/datamodels"
+	"errors"
+	"io/ioutil"
+	"strconv"
+
+	"github.com/Jeffail/gabs"
+)
+
+/* -----------------------------------------------------------------------------
+ * Generate job object from JSON.
+ * -------------------------------------------------------------------------- */
+
+func ParseJSONParams(filename string) (datamodels.Job, error) {
+	var err error
+	var job datamodels.Job
+
+	rawJSON, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return job, err
+	}
+
+	// Parse the raw json.
+	jsonParsed, err := gabs.ParseJSON(rawJSON)
+	if err != nil {
+		return job, err
+	}
+
+	// Extract and set slurm preamble.
+	slurmPreamble, err := slurmPreambleFromJSON(jsonParsed)
+	if err != nil {
+		return job, err
+	}
+	job.SlurmPreamble = slurmPreamble
+
+	// Get and set the sample file name.
+	sampleFile, err := samplesFileFromJSON(jsonParsed)
+	if err != nil {
+		return job, err
+	}
+	job.SamplesFile = sampleFile
+
+	// Extract the commands from the params file.
+	var cmdErr error
+	var commands = make([]datamodels.Command, 0)
+	for _, c := range jsonParsed.Path("commands").Children() {
+		// Initialize empty command obj.
+		command := datamodels.Command{}
+		// Set batch argument.
+		command.Batch, cmdErr = isBatchCommand(c)
+		if cmdErr != nil {
+			return job, cmdErr
+		}
+
+		// Extract and set command preamble.
+		preamble, cmdErr := commandPreambleFromJSON(c)
+		if cmdErr != nil {
+			return job, cmdErr
+		}
+		command.Preamble = preamble
+
+		// Extract and set the command params.
+		params, cmdErr := commandParamsFromJSON(c)
+		if cmdErr != nil {
+			return job, cmdErr
+		}
+		command.CommandParams = params
+		commands = append(commands, command)
+	}
+	job.Commands = commands
+	return job, nil
+}
+
+func isBatchCommand(jsonParsed *gabs.Container) (bool, error) {
+	var err error
+
+	if jsonParsed.Exists("batch") {
+		return jsonParsed.Path("batch").Data().(bool), nil
+	}
+
+	err = errors.New(`JSON error: Missing parameter "batch"`)
+	return false, err
+}
+
+func samplesFileFromJSON(jsonParsed *gabs.Container) (string, error) {
+	if jsonParsed.Exists("samples_file") {
+		return jsonParsed.Path("samples_file").Data().(string), nil
+	} else {
+		err := errors.New(`JSON error: Missing parameter "samples_file"`)
+		return "", err
+	}
+}
+
+func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble, error) {
+	var err error
+	var preamble = datamodels.SlurmPreamble{}
+
+	if jsonParsed.Exists("job_name") {
+		preamble.JobName = jsonParsed.Path("job_name").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "job_name"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("wall_time") {
+		preamble.WallTime = jsonParsed.Path("wall_time").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "wall_time"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("partition") {
+		preamble.Partition = jsonParsed.Path("partition").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "partition"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("email_begin") {
+		preamble.EmailBegin = jsonParsed.Path("email_begin").Data().(bool)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "email_begin"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("email_end") {
+		preamble.EmailEnd = jsonParsed.Path("email_end").Data().(bool)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "email_end"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("email_fail") {
+		preamble.EmailFail = jsonParsed.Path("email_fail").Data().(bool)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "email_fail"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("email_address") {
+		preamble.EmailAddress = jsonParsed.Path("email_address").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "email_address"`)
+		return preamble, err
+	}
+
+	return preamble, nil
+}
+
+func commandPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.CommandPreamble, error) {
+	var err error
+	var preamble datamodels.CommandPreamble
+
+	if jsonParsed.Exists("tasks") {
+		preamble.Tasks = int64(jsonParsed.Path("tasks").Data().(float64))
+	} else {
+		err = errors.New(`JSON error: Missing parameter "tasks"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("cpus") {
+		preamble.CPUs = int64(jsonParsed.Path("cpus").Data().(float64))
+	} else {
+		err = errors.New(`JSON error: Missing parameter "cpus"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("memory") {
+		preamble.Memory = int64(jsonParsed.Path("memory").Data().(float64))
+	} else {
+		err = errors.New(`JSON error: Missing parameter "memory"`)
+		return preamble, err
+	}
+
+	return preamble, nil
+}
+
+func commandParamsFromJSON(jsonParsed *gabs.Container) (datamodels.CommandParams, error) {
+	var err error
+	var params datamodels.CommandParams
+
+	if jsonParsed.Exists("command") {
+		params.Command = jsonParsed.Path("command").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "command"`)
+		return params, err
+	}
+	if jsonParsed.Exists("volume") {
+		params.Volume = jsonParsed.Path("volume").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "volume"`)
+		return params, err
+	}
+	if jsonParsed.Exists("singularity_path") {
+		params.SingularityPath = jsonParsed.Path("singularity_path").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "singularity_path"`)
+		return params, err
+	}
+	if jsonParsed.Exists("singularity_image") {
+		params.SingularityImage = jsonParsed.Path("singularity_image").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "singularity_image"`)
+		return params, err
+	}
+
+	// Deal with the "optional params"
+	if jsonParsed.Exists("workdir") {
+		params.WorkDir = jsonParsed.Path("workdir").Data().(string)
+	}
+	if jsonParsed.Exists("subcommand") {
+		params.Subcommand = jsonParsed.Path("subcommand").Data().(string)
+	}
+
+	// Get all command "options".
+	params.CommandOptions = commandOptionsFromJSON(jsonParsed)
+	// Get all command "arguments".
+	params.CommandArgs = commandArgumentsFromJSON(jsonParsed)
+
+	return params, nil
+}
+
+func commandOptionsFromJSON(jsonParsed *gabs.Container) []string {
+	var options = make([]string, 0)
+	for _, c := range jsonParsed.Path("options").Children() {
+		options = append(options, c.Path("option").Data().(string))
+	}
+	return options
+}
+
+func commandArgumentsFromJSON(jsonParsed *gabs.Container) []string {
+	var arguments = make([]string, 0)
+	for _, c := range jsonParsed.Path("arguments").Children() {
+		arguments = append(arguments, c.Path("arg").Data().(string))
+	}
+	return arguments
+}
+
+func JobGen(scanner *bufio.Scanner) (datamodels.Job, error) {
+	var job = datamodels.Job{}
+	var commands = make([]datamodels.Command, 0)
+	var command = datamodels.Command{}
+	var slurmPreamble = datamodels.SlurmPreamble{}
+	var commandPreamble = datamodels.CommandPreamble{}
+	var CommandParams = datamodels.CommandParams{}
+	var lastTag string
+
+	// Read the file line by line.
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Ignore any blank or commented lines.
+		if IgnoreLine(line) {
+			continue
+		}
+
+		// Get the line tag and assigned value.
+		tag, val := ParseLine(line)
+
+		if (tag == "JOB_NAME") && (lastTag == "ARGUMENT" || lastTag == "OPTION") {
+			// Finalize the command and add command to array once we hit the next command block.
+			command.Preamble = commandPreamble
+			command.CommandParams = CommandParams
+			commands = append(commands, command)
+
+			// Reset the objects.
+			commandPreamble = datamodels.CommandPreamble{}
+			command = datamodels.Command{}
+			CommandParams = datamodels.CommandParams{}
+			lastTag = ""
+		}
+
+		if tag == "JOB_NAME" {
+			// Set the command name.
+			command.CommandName = val
+		}
+
+		// Set batch preamble
+		if IsBatchPreamble(tag) {
+			setBatchPreamble(tag, val, &command)
+		}
+
+		// Set slurm preamble
+		if IsSlurmPreamble(tag) {
+			setSlurmPreamble(tag, val, &slurmPreamble)
+		}
+
+		// Set command preamble
+		if IsCommandPreamble(tag) {
+			setCommandPreamble(tag, val, &commandPreamble)
+		}
+
+		// Get and set the parameters.
+		setCommandParams(tag, val, &CommandParams)
+		lastTag = tag
+	}
+
+	// If there was an error with the scan, panic!
+	err := scanner.Err()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle the last script def that was parsed before scanner ended.
+	job.SlurmPreamble = slurmPreamble
+	command.Preamble = commandPreamble
+	command.CommandParams = CommandParams
+	commands = append(commands, command)
+
+	// Assign the commands to the job.
+	job.Commands = commands
+	return job, nil
+}
+
+func setSlurmParams(tag, val string, SlurmParams *datamodels.SlurmParams, CommandParams *datamodels.CommandParams) {
+	// if tag == "JOB_NAME" {
+	// 	SlurmParams.JobName = val
+	// } else if tag == "PARTITION" {
+	// 	SlurmParams.Partition = val
+	// } else if tag == "NOTIFICATION_BEGIN" {
+	// 	SlurmParams.NotificationBegin, _ = strconv.ParseBool(val)
+	// } else if tag == "NOTIFICATION_END" {
+	// 	SlurmParams.NotificationEnd, _ = strconv.ParseBool(val)
+	// } else if tag == "NOTIFICATION_FAIL" {
+	// 	SlurmParams.NotificationFail, _ = strconv.ParseBool(val)
+	// } else if tag == "NOTIFICATION_EMAIL" {
+	// 	SlurmParams.NotificationEmail = val
+	// } else if tag == "TASKS" {
+	// 	SlurmParams.Tasks, _ = strconv.ParseInt(val, 10, 64)
+	// } else if tag == "CPUS" {
+	// 	SlurmParams.CPUs, _ = strconv.ParseInt(val, 10, 64)
+	// } else if tag == "MEMORY" {
+	// 	SlurmParams.Memory, _ = strconv.ParseInt(val, 10, 64)
+	// } else if tag == "SINGULARITY_PATH" {
+	// 	CommandParams.SingularityPath = val
+	// } else if tag == "SINGULARITY_IMAGE" {
+	// 	CommandParams.SingularityImage = val
+	// } else if tag == "WORK_DIR" {
+	// 	CommandParams.WorkDir = val
+	// } else if tag == "VOLUME" {
+	// 	CommandParams.Volume = val
+	// } else if tag == "COMMAND" {
+	// 	CommandParams.Command = val
+	// } else if tag == "OPTION" {
+	// 	CommandParams.CommandOptions = append(CommandParams.CommandOptions, val)
+	// } else if tag == "ARGUMENT" {
+	// 	CommandParams.CommandArgs = append(CommandParams.CommandArgs, val)
+	// }
+}
+
+func setCommandParams(tag, val string, params *datamodels.CommandParams) {
+	if tag == "SINGULARITY_PATH" {
+		params.SingularityPath = val
+	} else if tag == "SINGULARITY_IMAGE" {
+		params.SingularityImage = val
+	} else if tag == "WORK_DIR" {
+		params.WorkDir = val
+	} else if tag == "VOLUME" {
+		params.Volume = val
+	} else if tag == "COMMAND" {
+		params.Command = val
+	} else if tag == "SUBCOMMAND" {
+		params.Subcommand = val
+	} else if tag == "OPTION" {
+		params.CommandOptions = append(params.CommandOptions, val)
+	} else if tag == "ARGUMENT" {
+		params.CommandArgs = append(params.CommandArgs, val)
+	}
+}
+
+func setBatchPreamble(tag, val string, cmd *datamodels.Command) {
+	if tag == "BATCH" {
+		cmd.Batch = true
+	} else if tag == "SAMPLES_FILE" {
+		cmd.SamplesFile = val
+	}
+}
+
+func setSlurmPreamble(tag, val string, preamble *datamodels.SlurmPreamble) {
+	if tag == "PARTITION" {
+		preamble.Partition = val
+	} else if tag == "NOTIFICATION_BEGIN" {
+		preamble.EmailBegin, _ = strconv.ParseBool(val)
+	} else if tag == "NOTIFICATION_END" {
+		preamble.EmailEnd, _ = strconv.ParseBool(val)
+	} else if tag == "NOTIFICATION_FAIL" {
+		preamble.EmailFail, _ = strconv.ParseBool(val)
+	} else if tag == "NOTIFICATION_EMAIL" {
+		preamble.EmailAddress = val
+	}
+}
+
+func setCommandPreamble(tag, val string, preamble *datamodels.CommandPreamble) {
+	if tag == "TASKS" {
+		preamble.Tasks, _ = strconv.ParseInt(val, 10, 64)
+	} else if tag == "CPUS" {
+		preamble.CPUs, _ = strconv.ParseInt(val, 10, 64)
+	} else if tag == "MEMORY" {
+		preamble.Memory, _ = strconv.ParseInt(val, 10, 64)
+	}
+}
