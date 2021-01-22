@@ -207,21 +207,76 @@ func writeCommandScript(cmd datamodels.Command) (string, error) {
 	// Defer the file closing until the function returns.
 	defer outfile.Close()
 
-	// *** The following can be written independent of the actual command. *** //
 	// Write the script header.
-	fmt.Fprintln(outfile, fmt.Sprintf("#!/bin/bash\n"))
+	writeBashScriptHeader(outfile)
 
-	// Write job shit.
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], cmd.CommandParams.Command)))
+	// Write singularity preamble.
+	writeSingularityPreamble(outfile, cmd)
+
+	// Write the command we are calling.
+	if command.CommandParams.Subcommand != "" {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", command.CommandParams.Command, command.CommandParams.Subcommand))))
+	} else {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+	}
 
 	// Write the command options and command arguments
 	writeCommandOptions(outfile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(outfile, cmd.CommandParams.CommandArgs)
 
 	return scriptName, nil
+}
+
+func writeBashScriptHeader(outfile *os.File) {
+	// Write the script header.
+	fmt.Fprintln(outfile, fmt.Sprintf("#!/bin/bash\n"))
+	fmt.Fprintln(outfile, "ulimit -n 10000")
+}
+
+func writeSingularityPreamble(outfile *os.File, cmd datamodels.Command) {
+	// Write singularity shit.
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
+}
+
+func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
+	// Star has specific formatting for certain options. Write them here.
+	for _, opt := range command.CommandParams.CommandOptions {
+		chunks := strings.Split(opt, " ")
+		if chunks[0] == "--outFileNamePrefix" {
+			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
+		}
+		if chunks[0] == "--readFilesIn" {
+			opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
+		}
+		writeCommandOption(outfile, opt)
+	}
+}
+
+func writeTrimGaloreCommandOptions(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
+	// TrimGalore has specific formatting for certain options. Write them here.
+	for _, opt := range command.CommandParams.CommandOptions {
+		chunks := strings.Split(opt, " ")
+		if chunks[0] == "--output_dir" {
+			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s", sample.OutputPath))
+		}
+		writeCommandOption(outfile, opt)
+	}
+}
+
+func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
+	for _, opt := range command.CommandParams.CommandOptions {
+		chunks := strings.Split(opt, " ")
+		if chunks[0] == "--output-dir" {
+			// Create the sample name directory.
+			basePath := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
+			// os.Mkdir(basePath, 0775)
+			// Format the output option for kallisto quant
+			opt = fmt.Sprintf("%s %s/kallisto_quant", chunks[0], basePath)
+		}
+		writeCommandOption(outfile, opt)
+	}
 }
 
 /* ---
@@ -234,55 +289,30 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 		return outfileName, err
 	}
 
-	// *** The following can be written independent of the actual command. *** //
-	// Write the script header.
-	fmt.Fprintln(outfile, fmt.Sprintf("#!/bin/bash\n"))
-	fmt.Fprintln(outfile, "ulimit -n 10000")
+	// Write the header lines to the bash script.
+	writeBashScriptHeader(outfile)
 
-	// Write job shit.
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], command.CommandParams.Volume)))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], command.CommandParams.SingularityPath, command.CommandParams.SingularityImage)))
+	// Write the singuarity command preamble.
+	writeSingularityPreamble(outfile, command)
+
+	// Write the command we are calling. If there is a subcommand (e.g., kallisto "quant") include it!
 	if command.CommandParams.Subcommand != "" {
 		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", command.CommandParams.Command, command.CommandParams.Subcommand))))
 	} else {
 		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
 	}
 
-	// TODO: This needs to be wrapped in star options command or something. We will likely
-	// have other tools that require specific option formattin.
 	if command.CommandParams.Command == "star" {
-		for _, opt := range command.CommandParams.CommandOptions {
-			chunks := strings.Split(opt, " ")
-			if chunks[0] == "--outFileNamePrefix" {
-				opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
-			}
-			if chunks[0] == "--readFilesIn" {
-				opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
-			}
-			writeCommandOption(outfile, opt)
-		}
+		// Format and write star specific options
+		writeStarCommandOptions(outfile, command, sample)
 	} else if command.CommandParams.Command == "trim_galore" {
-		for _, opt := range command.CommandParams.CommandOptions {
-			chunks := strings.Split(opt, " ")
-			if chunks[0] == "--output_dir" {
-				opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s", sample.OutputPath))
-			}
-			writeCommandOption(outfile, opt)
-		}
+		// Format and write trim_galore specific options
+		writeTrimGaloreCommandOptions(outfile, command, sample)
 	} else if command.CommandParams.Command == "kallisto" && command.CommandParams.Subcommand == "quant" {
-		for _, opt := range command.CommandParams.CommandOptions {
-			chunks := strings.Split(opt, " ")
-			if chunks[0] == "--output-dir" {
-				// Create the sample name directory.
-				basePath := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
-				// os.Mkdir(basePath, 0775)
-				// Format the output option for kallisto quant
-				opt = fmt.Sprintf("%s %s/kallisto_quant", chunks[0], basePath)
-			}
-			writeCommandOption(outfile, opt)
-		}
+		// Format and write kallisto quant specific options
+		writeKallistoQuantOptions(outfile, command, sample)
 	} else {
+		// Otherwise, write the option as it was provided.
 		writeCommandOptions(outfile, command.CommandParams.CommandOptions)
 	}
 
