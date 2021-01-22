@@ -1,4 +1,5 @@
 *.slurm
 *.sh
 *.txt
+*.json
 .vscode/
