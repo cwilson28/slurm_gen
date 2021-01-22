@@ -120,30 +120,9 @@ func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
 	for _, cmd := range job.Commands {
 		if cmd.Batch {
 			// User has indicated the command will be run in a batch format.
-			fmt.Println("Command is a batch command. Writing command bash scripts...")
-			// Get the samples over which this command will be run
-			samples := ParseSamplesFile(job.SamplesFile)
-			for _, sample := range samples {
-
-				bashScriptName, err := writeCommandScriptForSample(cmd, sample)
-
-				// Write the script line for the tool.
-				fmt.Fprintln(
-					slurmFile,
-					fmt.Sprintf(
-						"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
-						cmd.Preamble.Tasks,
-						cmd.Preamble.CPUs,
-						cmd.Preamble.Tasks,
-						job.SlurmPreamble.Partition,
-						cmd.Preamble.Memory,
-						bashScriptName,
-					),
-				)
-				// Make the bash script executable.
-				if err = os.Chmod(bashScriptName, 0755); err != nil {
-					return err
-				}
+			err := writeBatchCommand(slurmFile, cmd, job)
+			if err != nil {
+				return err
 			}
 		} else {
 			fmt.Println("Writing command script...")
