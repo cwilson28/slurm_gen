@@ -75,7 +75,7 @@ func main() {
 	}
 
 	// Write the job files.
-	err = utils.WriteSlurmJobScripts(job)
+	err = utils.WriteSlurmJobScript(job)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
@@ -136,14 +136,14 @@ func main() {
 	// 				if chunks[0] == "--readFilesIn" {
 	// 					opt = fmt.Sprintf("%s %s", chunks[0], s.DumpReadFiles())
 	// 				}
-	// 				utils.WriteCommandOption(outfile, opt)
+	// 				utils.writeCommandOption(outfile, opt)
 	// 			}
 	// 		} else {
-	// 			utils.WriteCommandOptions(outfile, cmd.CommandParams.CommandOptions)
+	// 			utils.writeCommandOptions(outfile, cmd.CommandParams.CommandOptions)
 	// 		}
 
 	// 		// Write any command args that are provided.
-	// 		utils.WriteCommandArgs(outfile, cmd.CommandParams.CommandArgs)
+	// 		utils.writeCommandArgs(outfile, cmd.CommandParams.CommandArgs)
 	// 		fmt.Printf("%s written successfully\n", filename)
 	// 		batchFiles = append(batchFiles, filename)
 	// 	}
