@@ -115,12 +115,12 @@ func writeJobCPU(slurmFile *os.File, job datamodels.Job) {
  * also generate the individual bash scripts for the commands being executed.
  * --- */
 func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
-
+	fmt.Println("Writing pipeline scripts...")
 	// Write the bash scripts for each command.
 	for _, cmd := range job.Commands {
 		if cmd.Batch {
 			// User has indicated the command will be run in a batch format.
-			fmt.Println("Writing command bash scripts...")
+			fmt.Println("Command is a batch command. Writing command bash scripts...")
 			// Get the samples over which this command will be run
 			samples := ParseSamplesFile(job.SamplesFile)
 			for _, sample := range samples {
@@ -146,6 +146,7 @@ func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
 				}
 			}
 		} else {
+			fmt.Println("Writing command script...")
 			// Write the bash script for the command.
 			bashScript, err := writeCommandScript(cmd)
 			if err != nil {
@@ -179,7 +180,8 @@ func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
  * Finish writing slurm file given a single batch command.
  * --- */
 func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodels.Job) error {
-
+	fmt.Println("Command is a batch command.")
+	fmt.Println("Writing batch bash scripts...")
 	// Parse the provided samples file
 	samples := ParseSamplesFile(job.SamplesFile)
 	for _, sample := range samples {
@@ -332,7 +334,6 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 		noExt := true
 		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
 		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
-		fmt.Println(forwardReads, reverseReads)
 		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
 		writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
 	} else {
