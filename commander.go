@@ -75,7 +75,7 @@ func main() {
 	}
 
 	// Write the job files.
-	err = utils.WriteJobFiles(job)
+	err = utils.WriteSlurmJobScripts(job)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
@@ -109,7 +109,7 @@ func main() {
 	// 			}
 	// 		}()
 
-	// 		utils.WriteSlurmPreamble(outfile, strings.TrimRight(filename, ".slurm"), job.SlurmPreamble)
+	// 		utils.writeSlurmJobPreamble(outfile, strings.TrimRight(filename, ".slurm"), job.SlurmPreamble)
 	// 		utils.WriteCommandPreamble(outfile, cmd.Preamble)
 	// 		// Write intermediary job shit.
 	// 		// TODO: Wrap this in a "Write" command in the output_utils file.

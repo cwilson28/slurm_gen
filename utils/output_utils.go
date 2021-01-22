@@ -3,7 +3,6 @@ package utils
 import (
 	"commander/datamodels"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -11,10 +10,10 @@ import (
 /* -----------------------------------------------------------------------------
  * Functions for writing output files for the slurm job.
  * -------------------------------------------------------------------------- */
-func WriteJobFiles(job datamodels.Job) error {
+func WriteSlurmJobScript(job datamodels.Job) error {
 	var err error
 
-	fmt.Println("Generating slurm script...")
+	fmt.Println("Writing slurm script preamble...")
 
 	// Open the parent slurm file
 	filename := fmt.Sprintf("%s.slurm", job.SlurmPreamble.JobName)
@@ -30,21 +29,27 @@ func WriteJobFiles(job datamodels.Job) error {
 	}()
 
 	// Write the slurm preamble for the parent slurm script
-	writeSlurmPreamble(slurmFile, job.SlurmPreamble)
+	writeSlurmJobPreamble(slurmFile, job.SlurmPreamble)
 
 	// Write the max CPUs for this job. For pipeline jobs, this will be the
 	// max CPUs requested by any single step in the pipeline. For single command
 	// jobs, this will be the CPUs required for that command.
-	writeMaxCPU(slurmFile, job)
+	writeJobCPU(slurmFile, job)
 
 	// Write intermediary job shit.
-	for _, line := range datamodels.MORE_JOBSHIT {
-		fmt.Fprintln(slurmFile, line)
-	}
+	writeIntermediateJobShit(slurmFile)
 
-	// If there are multiple commands, we are writing file for a pipeline.
+	/* -----------------
+	 * All slurm preamble is written at this point. All that remains is to write
+	 * command specific jargon.
+	 * -------------- */
+
+	// If there are multiple commands, it is safe to assume we are generating
+	// a slurm script for a pipeline. Write the command details in a pipeline
+	// format.
 	if len(job.Commands) > 1 {
-		err = writePipelineFiles(slurmFile, job)
+		fmt.Println("Writing pipeline slurm script...")
+		err = writePipelineSlurmScript(slurmFile, job)
 		return err
 	}
 
@@ -57,44 +62,9 @@ func WriteJobFiles(job datamodels.Job) error {
 	// TODO: Make this batch bash script writing into a function. It's being used
 	// more than once.
 	if cmd.Batch {
-		fmt.Println("Writing command bash scripts...")
-		// Get the samples over which this command will be run
-		samples := ParseSamplesFile(job.SamplesFile)
-		for _, sample := range samples {
-			// Write a bash script for each sample.
-			bashFileName := fmt.Sprintf("%s_%s.sh", cmd.CommandParams.Command, sample.Prefix)
-			outfile, err := os.Create(bashFileName)
-			if err != nil {
-				return err
-			}
-
-			defer func() {
-				if err = outfile.Close(); err != nil {
-					log.Fatal(err)
-				}
-			}()
-
-			bashScript, err := WriteBatchBashScript(outfile, cmd, sample)
-			// Write the script line for the tool.
-			fmt.Fprintln(
-				slurmFile,
-				fmt.Sprintf(
-					"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
-					cmd.Preamble.Tasks,
-					cmd.Preamble.CPUs,
-					cmd.Preamble.Tasks,
-					job.SlurmPreamble.Partition,
-					cmd.Preamble.Memory,
-					bashScript,
-				),
-			)
-			// Make the bash script executable.
-			if err = os.Chmod(bashScript, 0755); err != nil {
-				return err
-			}
-		}
-		WriteWait(slurmFile)
-		return nil
+		fmt.Println("Writing command script...")
+		err = writeBatchCommand(slurmFile, cmd, job)
+		return err
 	}
 
 	// TODO: Revisit this.
@@ -107,31 +77,35 @@ func WriteJobFiles(job datamodels.Job) error {
 }
 
 /* -----------------------------------------------------------------------------
- * Internal functions
+ * Helpers for writing different tupes of scripts and script components.
  * -------------------------------------------------------------------------- */
-func writePipelineFiles(slurmFile *os.File, job datamodels.Job) error {
 
-	// Write the bash scripts for the pipeline commands
+/* ---
+ * Write intermidate job shit to the slurm file.slurmFile :-)
+ *  --- */
+func writeIntermediateJobShit(slurmFile *os.File) {
+	for _, line := range datamodels.MORE_JOBSHIT {
+		fmt.Fprintln(slurmFile, line)
+	}
+}
+
+/* ---
+ * Write the remaining contents of a pipeline slurm script. This function will
+ * also generate the individual bash scripts for the commands being executed.
+ * --- */
+func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
+
+	// Write the bash scripts for each command.
 	for _, cmd := range job.Commands {
 		if cmd.Batch {
+			// User has indicated the command will be run in a batch format.
 			fmt.Println("Writing command bash scripts...")
 			// Get the samples over which this command will be run
 			samples := ParseSamplesFile(job.SamplesFile)
 			for _, sample := range samples {
-				// Write a bash script for each sample.
-				bashFileName := fmt.Sprintf("%s_%s.sh", cmd.CommandParams.Command, sample.Prefix)
-				outfile, err := os.Create(bashFileName)
-				if err != nil {
-					return err
-				}
 
-				defer func() {
-					if err = outfile.Close(); err != nil {
-						log.Fatal(err)
-					}
-				}()
+				bashScriptName, err := writeCommandScriptForSample(cmd, sample)
 
-				bashScript, err := WriteBatchBashScript(outfile, cmd, sample)
 				// Write the script line for the tool.
 				fmt.Fprintln(
 					slurmFile,
@@ -142,17 +116,17 @@ func writePipelineFiles(slurmFile *os.File, job datamodels.Job) error {
 						cmd.Preamble.Tasks,
 						job.SlurmPreamble.Partition,
 						cmd.Preamble.Memory,
-						bashScript,
+						bashScriptName,
 					),
 				)
 				// Make the bash script executable.
-				if err = os.Chmod(bashScript, 0755); err != nil {
+				if err = os.Chmod(bashScriptName, 0755); err != nil {
 					return err
 				}
 			}
 		} else {
 			// Write the bash script for the command.
-			bashScript, err := WriteBashScript(slurmFile, cmd)
+			bashScript, err := WriteCommandScript(cmd)
 			if err != nil {
 				return err
 			}
@@ -181,62 +155,104 @@ func writePipelineFiles(slurmFile *os.File, job datamodels.Job) error {
 }
 
 /* ---
+ * Finish writing slurm file given a single batch command.
+ * --- */
+func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodels.Job) error {
+
+	// Parse the provided samples file
+	samples := ParseSamplesFile(job.SamplesFile)
+	for _, sample := range samples {
+
+		// Write the command details to a bash script.
+		bashScriptName, err := writeCommandScriptForSample(cmd, sample)
+
+		// Make the bash script executable.
+		if err = os.Chmod(bashScriptName, 0755); err != nil {
+			return err
+		}
+
+		// Write the script line for the tool in the slurm file.
+		fmt.Fprintln(
+			slurmFile,
+			fmt.Sprintf(
+				"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
+				cmd.Preamble.Tasks,
+				cmd.Preamble.CPUs,
+				cmd.Preamble.Tasks,
+				job.SlurmPreamble.Partition,
+				cmd.Preamble.Memory,
+				bashScriptName,
+			),
+		)
+	}
+	// Write a wait block to the slurm file. Don't want the parent script to
+	// exit before the children.
+	WriteWait(slurmFile)
+	return nil
+}
+
+/* ---
  * Write a parent slurm file.
  * --- */
-func WriteSlurmScript(slurmFile *os.File, job datamodels.Job) {
-	// Write the slurm preamble for the parent slurm script
-	writeSlurmPreamble(slurmFile, job.SlurmPreamble)
-	// Write the command preamble. We can use Commands[0] since there *should* only be one command.
-	WriteCommandPreamble(slurmFile, job.Commands[0].Preamble)
+// func WriteSlurmScript(slurmFile *os.File, job datamodels.Job) {
+// 	// Write the slurm preamble for the parent slurm script
+// 	writeSlurmJobPreamble(slurmFile, job.SlurmPreamble)
+// 	// Write the command preamble. We can use Commands[0] since there *should* only be one command.
+// 	WriteCommandPreamble(slurmFile, job.Commands[0].Preamble)
 
-	// Write intermediary job shit.
-	for _, line := range datamodels.MORE_JOBSHIT {
-		fmt.Fprintln(slurmFile, line)
-	}
+// 	// Write intermediary job shit.
+// 	for _, line := range datamodels.MORE_JOBSHIT {
+// 		fmt.Fprintln(slurmFile, line)
+// 	}
 
-	// Write command shit.
-	// TODO: Wrap this in a function.
-	command := job.Commands[0]
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], command.CommandParams.Volume)))
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], command.CommandParams.SingularityPath, command.CommandParams.SingularityImage)))
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+// 	// Write command shit.
+// 	// TODO: Wrap this in a function.
+// 	command := job.Commands[0]
+// 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
+// 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], command.CommandParams.Volume)))
+// 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], command.CommandParams.SingularityPath, command.CommandParams.SingularityImage)))
+// 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
 
-	WriteCommandOptions(slurmFile, command.CommandParams.CommandOptions)
-	WriteCommandArgs(slurmFile, command.CommandParams.CommandArgs)
-}
+// 	WriteCommandOptions(slurmFile, command.CommandParams.CommandOptions)
+// 	WriteCommandArgs(slurmFile, command.CommandParams.CommandArgs)
+// }
 
 /* ---
  * Write the command to a bash file.
  * --- */
-func WriteBashScript(outfile *os.File, command datamodels.Command) (string, error) {
-	filename := fmt.Sprintf("%s.sh", command.CommandName)
-	outfile, err := os.Create(filename)
+func WriteCommandScript(cmd datamodels.Command) (string, error) {
+	// Write a bash script for each sample.
+	scriptName := fmt.Sprintf("%s.sh", cmd.CommandParams.Command)
+	outfile, err := os.Create(scriptName)
 	if err != nil {
-		return filename, err
+		return scriptName, err
 	}
+
+	// Defer the file closing until the function returns.
+	defer outfile.Close()
 
 	// *** The following can be written independent of the actual command. *** //
 	// Write the script header.
 	fmt.Fprintln(outfile, fmt.Sprintf("#!/bin/bash\n"))
+
 	// Write job shit.
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], command.CommandParams.Volume)))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], command.CommandParams.SingularityPath, command.CommandParams.SingularityImage)))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], cmd.CommandParams.Command)))
 
-	WriteCommandOptions(outfile, command.CommandParams.CommandOptions)
-	WriteCommandArgs(outfile, command.CommandParams.CommandArgs)
-	outfile.Close()
-	fmt.Printf("%s.sh written successfully\n", command.CommandName)
-	return filename, nil
+	// Write the command options and command arguments
+	WriteCommandOptions(outfile, cmd.CommandParams.CommandOptions)
+	WriteCommandArgs(outfile, cmd.CommandParams.CommandArgs)
+
+	return scriptName, nil
 }
 
-func WriteBatchBashScript(outfile *os.File, command datamodels.Command, sample datamodels.Sample) (string, error) {
-	filename := fmt.Sprintf("%s_%s.sh", command.CommandParams.Command, sample.Prefix)
-	outfile, err := os.Create(filename)
+func writeCommandScriptForSample(command datamodels.Command, sample datamodels.Sample) (string, error) {
+	outfileName := fmt.Sprintf("%s_%s.sh", command.CommandParams.Command, sample.Prefix)
+	outfile, err := os.Create(outfileName)
 	if err != nil {
-		return filename, err
+		return outfileName, err
 	}
 
 	// *** The following can be written independent of the actual command. *** //
@@ -326,15 +342,14 @@ func WriteBatchBashScript(outfile *os.File, command datamodels.Command, sample d
 	}
 
 	outfile.Close()
-	fmt.Printf("%s written successfully\n", filename)
-	return filename, nil
+	return outfileName, nil
 
 }
 
 /* ---
- * Write the slurm preamble to a .slurm file.
+ * Write the slurm job preamble to a .slurm file.
  * --- */
-func writeSlurmPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble) {
+func writeSlurmJobPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble) {
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", datamodels.SLURM_PREAMBLE["header"]))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_name"], preamble.JobName)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["partition"], preamble.Partition)))
@@ -345,7 +360,7 @@ func writeSlurmPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble) {
 	fmt.Fprintln(slurmFile)
 }
 
-func writeMaxCPU(slurmFile *os.File, job datamodels.Job) {
+func writeJobCPU(slurmFile *os.File, job datamodels.Job) {
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["cpus"], job.MaxCPUUsage())))
 }
 
