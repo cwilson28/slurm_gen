@@ -151,7 +151,6 @@ func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
 				return err
 			}
 		}
-		writeWait(slurmFile)
 	}
 	return nil
 }
