@@ -196,9 +196,9 @@ func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodel
 /* ---
  * Write the command to a bash file.
  * --- */
-func writeCommandScript(cmd datamodels.Command) (string, error) {
+func writeCommandScript(command datamodels.Command) (string, error) {
 	// Write a bash script for each sample.
-	scriptName := fmt.Sprintf("%s.sh", cmd.CommandParams.Command)
+	scriptName := fmt.Sprintf("%s.sh", command.CommandParams.Command)
 	outfile, err := os.Create(scriptName)
 	if err != nil {
 		return scriptName, err
@@ -211,7 +211,7 @@ func writeCommandScript(cmd datamodels.Command) (string, error) {
 	writeBashScriptHeader(outfile)
 
 	// Write singularity preamble.
-	writeSingularityPreamble(outfile, cmd)
+	writeSingularityPreamble(outfile, command)
 
 	// Write the command we are calling.
 	if command.CommandParams.Subcommand != "" {
@@ -221,8 +221,8 @@ func writeCommandScript(cmd datamodels.Command) (string, error) {
 	}
 
 	// Write the command options and command arguments
-	writeCommandOptions(outfile, cmd.CommandParams.CommandOptions)
-	writeCommandArgs(outfile, cmd.CommandParams.CommandArgs)
+	writeCommandOptions(outfile, command.CommandParams.CommandOptions)
+	writeCommandArgs(outfile, command.CommandParams.CommandArgs)
 
 	return scriptName, nil
 }
@@ -279,6 +279,44 @@ func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sam
 	}
 }
 
+func writeTrimGaloreArguments(outfile *os.File, sample datamodels.Sample) {
+	// Write the forward read file arg to the script.
+	writeCommandArg(outfile, sample.DumpForwardReadFileWithPath())
+	// Write the reverse read file arg to the script.
+	writeCommandArg(outfile, sample.DumpReverseReadFileWithPath())
+}
+
+func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
+	// TODO: Revisit this. It can be improved.
+	// First, we will write the readfiles argument.
+	// We want trimmed reads here. So drop the file extention from the readfile name.
+	noExt := true
+	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+	reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+	writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
+	writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
+
+	// Next we will write the reference argument. This will be supplied in the params.txt file
+	writeCommandArgs(outfile, command.CommandParams.CommandArgs)
+
+	// Write the samplename arg
+	sampleNameArg := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
+	writeCommandArg(outfile, sampleNameArg)
+}
+
+func writeFastQCArguments(outfile *os.File, sample datamodels.Sample) {
+	sequenceFilesArg := sample.DumpReadFiles()
+	writeCommandArg(outfile, sequenceFilesArg)
+}
+
+func writeKallistoQuantArguments(outfile *os.File, sample datamodels.Sample) {
+	noExt := true
+	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+	reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+	writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
+	writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
+}
+
 /* ---
  * Write a command script for a given command given a particular sample.
  *  --- */
@@ -288,6 +326,9 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	if err != nil {
 		return outfileName, err
 	}
+
+	// Defer file closing until after the function returns.
+	defer outfile.Close()
 
 	// Write the header lines to the bash script.
 	writeBashScriptHeader(outfile)
@@ -302,6 +343,7 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
 	}
 
+	// Write command options.
 	if command.CommandParams.Command == "star" {
 		// Format and write star specific options
 		writeStarCommandOptions(outfile, command, sample)
@@ -316,42 +358,24 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 		writeCommandOptions(outfile, command.CommandParams.CommandOptions)
 	}
 
+	// Write command args.
 	if command.CommandParams.Command == "trim_galore" {
-		// Write the forward read file arg to the script.
-		writeCommandArg(outfile, sample.DumpForwardReadFileWithPath())
-		// Write the reverse read file arg to the script.
-		writeCommandArg(outfile, sample.DumpReverseReadFileWithPath())
+		// Format and write trim_galore arguments.
+		writeTrimGaloreArguments(outfile, sample)
 	} else if command.CommandParams.Command == "rsem-calculate-expression" {
-		// First, we will write the readfiles argument.
-		// We want trimmed reads here. So drop the file extention from the readfile name.
-		noExt := true
-		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
-		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
-		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
-		writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
-
-		// Next we will write the reference argument. This will be supplied in the params.txt file
-		writeCommandArgs(outfile, command.CommandParams.CommandArgs)
-
-		// Write the samplename arg
-		sampleNameArg := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
-		writeCommandArg(outfile, sampleNameArg)
+		// Format and write rsem arguments.
+		writeRSEMArguments(outfile, command, sample)
 	} else if command.CommandParams.Command == "fastqc" {
-		sequenceFilesArg := sample.DumpReadFiles()
-		writeCommandArg(outfile, sequenceFilesArg)
+		// Format and write fastqc arguments.
+		writeFastQCArguments(outfile, sample)
 	} else if command.CommandParams.Command == "kallisto" && command.CommandParams.Subcommand == "quant" {
-		noExt := true
-		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
-		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
-		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
-		writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
+		// Format and write kallisto quant arguments.
+		writeKallistoQuantArguments(outfile, sample)
 	} else {
+		// Otherwise, write the arguments as they were provided.
 		writeCommandArgs(outfile, command.CommandParams.CommandArgs)
 	}
-
-	outfile.Close()
 	return outfileName, nil
-
 }
 
 /* ---
