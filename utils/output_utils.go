@@ -8,7 +8,7 @@ import (
 )
 
 /* -----------------------------------------------------------------------------
- * Functions for writing output files for the slurm job.
+ * The main function for writing the slurm script and accompanying bash scripts.
  * -------------------------------------------------------------------------- */
 func WriteSlurmJobScript(job datamodels.Job) error {
 	var err error
@@ -77,17 +77,8 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 }
 
 /* -----------------------------------------------------------------------------
- * Helpers for writing different tupes of scripts and script components.
+ * Various helper functions.
  * -------------------------------------------------------------------------- */
-
-/* ---
- * Write intermidate job shit to the slurm file.slurmFile :-)
- *  --- */
-func writeIntermediateJobShit(slurmFile *os.File) {
-	for _, line := range datamodels.MORE_JOBSHIT {
-		fmt.Fprintln(slurmFile, line)
-	}
-}
 
 /* ---
  * Write the slurm job preamble to a .slurm file.
@@ -101,6 +92,16 @@ func writeSlurmJobPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["time"], preamble.WallTime)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], preamble.JobName)))
 	fmt.Fprintln(slurmFile)
+}
+
+/* ---
+ * Write intermidate job shit to the slurm file.slurmFile :-)
+ * This will probably be omitted in the future.
+ *  --- */
+func writeIntermediateJobShit(slurmFile *os.File) {
+	for _, line := range datamodels.MORE_JOBSHIT {
+		fmt.Fprintln(slurmFile, line)
+	}
 }
 
 /* ---
@@ -227,12 +228,18 @@ func writeCommandScript(command datamodels.Command) (string, error) {
 	return scriptName, nil
 }
 
+/* ---
+ * Write bash script header to a file.
+ * --- */
 func writeBashScriptHeader(outfile *os.File) {
 	// Write the script header.
 	fmt.Fprintln(outfile, fmt.Sprintf("#!/bin/bash\n"))
 	fmt.Fprintln(outfile, "ulimit -n 10000")
 }
 
+/* ---
+ * Write singularity preamble for the command we are calling.
+ * --- */
 func writeSingularityPreamble(outfile *os.File, cmd datamodels.Command) {
 	// Write singularity shit.
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
@@ -240,6 +247,9 @@ func writeSingularityPreamble(outfile *os.File, cmd datamodels.Command) {
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
 }
 
+/* ---
+ * Format and write STAR specific options.
+ * --- */
 func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
 	// Star has specific formatting for certain options. Write them here.
 	for _, opt := range command.CommandParams.CommandOptions {
@@ -254,6 +264,9 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 	}
 }
 
+/* ---
+ * Format and write trim_galore specific options.
+ * --- */
 func writeTrimGaloreCommandOptions(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
 	// TrimGalore has specific formatting for certain options. Write them here.
 	for _, opt := range command.CommandParams.CommandOptions {
@@ -265,6 +278,9 @@ func writeTrimGaloreCommandOptions(outfile *os.File, command datamodels.Command,
 	}
 }
 
+/* ---
+ * Format and write kallisto specific options.
+ * --- */
 func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
 	for _, opt := range command.CommandParams.CommandOptions {
 		chunks := strings.Split(opt, " ")
@@ -279,6 +295,9 @@ func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sam
 	}
 }
 
+/* ---
+ * Format and write trim_galore specific arguments.
+ * --- */
 func writeTrimGaloreArguments(outfile *os.File, sample datamodels.Sample) {
 	// Write the forward read file arg to the script.
 	writeCommandArg(outfile, sample.DumpForwardReadFileWithPath())
@@ -286,6 +305,9 @@ func writeTrimGaloreArguments(outfile *os.File, sample datamodels.Sample) {
 	writeCommandArg(outfile, sample.DumpReverseReadFileWithPath())
 }
 
+/* ---
+ * Format and write rsem specific arguments.
+ * --- */
 func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
 	// TODO: Revisit this. It can be improved.
 	// First, we will write the readfiles argument.
@@ -304,11 +326,17 @@ func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample dat
 	writeCommandArg(outfile, sampleNameArg)
 }
 
+/* ---
+ * Format and write fastqc specific arguments.
+ * --- */
 func writeFastQCArguments(outfile *os.File, sample datamodels.Sample) {
 	sequenceFilesArg := sample.DumpReadFiles()
 	writeCommandArg(outfile, sequenceFilesArg)
 }
 
+/* ---
+ * Format and write kallisto quant specific arguments.
+ * --- */
 func writeKallistoQuantArguments(outfile *os.File, sample datamodels.Sample) {
 	noExt := true
 	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
@@ -424,6 +452,9 @@ func writeCommandArg(outfile *os.File, arg string) {
 	fmt.Fprintln(outfile, fmt.Sprintf("%s \\", arg))
 }
 
+/* ---
+ * Write a single wait block to the slurm file.
+ * --- */
 func writeWait(outfile *os.File) {
 	// Write a single command arg.
 	fmt.Fprintln(outfile, "wait")
