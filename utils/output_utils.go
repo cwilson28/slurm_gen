@@ -281,11 +281,11 @@ func WriteBatchBashScript(outfile *os.File, command datamodels.Command, sample d
 			if chunks[0] == "--output-dir" {
 				// Create the sample name directory.
 				basePath := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
-				os.Mkdir(basePath, 0775)
+				// os.Mkdir(basePath, 0775)
 				// Format the output option for kallisto quant
 				opt = fmt.Sprintf("%s %s/kallisto_quant", chunks[0], basePath)
-				WriteCommandOption(outfile, opt)
 			}
+			WriteCommandOption(outfile, opt)
 		}
 	} else {
 		WriteCommandOptions(outfile, command.CommandParams.CommandOptions)

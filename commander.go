@@ -55,12 +55,19 @@ func main() {
 	}
 
 	paramFile := flag.Args()[0]
+
 	/* -------------------------------------------------------------------------
 	 * We are supporting both plain text and json param files.
 	 * ---------------------------------------------------------------------- */
 
 	if utils.IsJSONParam(paramFile) {
 		job, err = utils.ParseJSONParams(paramFile)
+		if err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+	} else {
+		job, err = utils.ParsePlainTextParams(paramFile)
 		if err != nil {
 			log.Fatal(err)
 			os.Exit(1)
@@ -73,129 +80,6 @@ func main() {
 		log.Fatal(err)
 		os.Exit(1)
 	}
-
-	// // Open the file for buffer based read.
-	// fileBuf, err := os.Open(paramFile.Value.String())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// // Defer file handle closing.
-	// defer func() {
-	// 	if err = fileBuf.Close(); err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// }()
-
-	// // Create a file scanner for reading the lines of the file.
-	// scanner := bufio.NewScanner(fileBuf)
-
-	// // Parse all script definitions supplied in the parameter file
-	// job, err := utils.JobGen(scanner)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// pipelineFlag := flag.Lookup("pipeline")
-	// if pipelineFlag.Value.String() == "true" {
-	// 	// Generate a slurm pipeline script composed of the scripts we just generated.
-	// 	// The script will use srun and each tool command will be written as a bash script.
-	// 	fmt.Println("Generating pipeline slurm script...")
-
-	// 	// Open the parent slurm file
-	// 	filename := fmt.Sprintf("pipeline.slurm")
-	// 	parentSlurmFile, err := os.Create(filename)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	defer func() {
-	// 		if err = parentSlurmFile.Close(); err != nil {
-	// 			log.Fatal(err)
-	// 		}
-	// 	}()
-
-	// 	// Write the slurm preamble for the parent slurm script
-	// 	utils.WriteSlurmPreamble(parentSlurmFile, "pipeline", job.SlurmPreamble)
-
-	// 	// In a pipeline, we want to write the larges cpu cound to job slurm preamble
-	// 	utils.WriteAggregateCPU(parentSlurmFile, job.Commands)
-
-	// 	// Write intermediary job shit.
-	// 	for _, line := range datamodels.MORE_JOBSHIT {
-	// 		fmt.Fprintln(parentSlurmFile, line)
-	// 	}
-
-	// 	// Write the bash scripts for the pipeline commands
-	// 	for _, cmd := range job.Commands {
-	// 		if cmd.Batch {
-	// 			// Get the samples over which this command will be run
-	// 			samples := utils.ParseSamplesFile(cmd.SamplesFile)
-	// 			for _, sample := range samples {
-	// 				// Write a bash script for each sample.
-	// 				filename := fmt.Sprintf("%s_%s.sh", cmd.CommandName, sample.Prefix)
-	// 				outfile, err := os.Create(filename)
-	// 				if err != nil {
-	// 					panic(err)
-	// 				}
-
-	// 				defer func() {
-	// 					if err = outfile.Close(); err != nil {
-	// 						log.Fatal(err)
-	// 					}
-	// 				}()
-
-	// 				bashScript, err := utils.WriteBatchBashScript(outfile, cmd, sample)
-	// 				// Write the script line for the tool.
-	// 				fmt.Fprintln(
-	// 					parentSlurmFile,
-	// 					fmt.Sprintf(
-	// 						"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s&",
-	// 						cmd.Preamble.Tasks,
-	// 						cmd.Preamble.CPUs,
-	// 						cmd.Preamble.Tasks,
-	// 						job.SlurmPreamble.Partition,
-	// 						cmd.Preamble.Memory,
-	// 						bashScript,
-	// 					),
-	// 				)
-	// 				// Make the bash script executable.
-	// 				if err = os.Chmod(bashScript, 0755); err != nil {
-	// 					fmt.Println(err)
-	// 				}
-	// 			}
-	// 		} else {
-	// 			bashScript, err := utils.WriteBashScript(parentSlurmFile, cmd)
-	// 			if err != nil {
-	// 				panic(err)
-	// 			}
-	// 			// Write the script line for the tool.
-	// 			fmt.Fprintln(
-	// 				parentSlurmFile,
-	// 				fmt.Sprintf(
-	// 					"srun --input=none -K1 -N%d -c%d --tasks-per-node=%d -w %s --mem-per-cpu=%d ./%s",
-	// 					cmd.Preamble.Tasks,
-	// 					cmd.Preamble.CPUs,
-	// 					cmd.Preamble.Tasks,
-	// 					job.SlurmPreamble.Partition,
-	// 					cmd.Preamble.Memory,
-	// 					bashScript,
-	// 				),
-	// 			)
-	// 			// Make the bash script executable.
-	// 			if err = os.Chmod(bashScript, 0755); err != nil {
-	// 				fmt.Println(err)
-	// 			}
-	// 		}
-	// 		utils.WriteWait(parentSlurmFile)
-	// 	}
-	// 	os.Exit(0)
-	// }
-
-	// // If pipeline was not specified, we can assume slurm gen is being run for a
-	// // single command. Grab the first command from the array.
-
-	// cmd := job.Commands[0]
 
 	// // Generate a slurm script for a single tool.
 	// fmt.Printf("Generating slurm script for %s...\n", cmd.CommandName)

@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-type SlurmParams struct {
-}
-
 type SlurmPreamble struct {
 	JobName      string
 	Partition    string

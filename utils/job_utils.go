@@ -5,6 +5,8 @@ import (
 	"commander/datamodels"
 	"errors"
 	"io/ioutil"
+	"log"
+	"os"
 	"strconv"
 
 	"github.com/Jeffail/gabs"
@@ -74,6 +76,103 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	return job, nil
 }
 
+func ParsePlainTextParams(filename string) (datamodels.Job, error) {
+	var job = datamodels.Job{}
+	var commands = make([]datamodels.Command, 0)
+	var command = datamodels.Command{}
+	var slurmPreamble = datamodels.SlurmPreamble{}
+	var commandPreamble = datamodels.CommandPreamble{}
+	var CommandParams = datamodels.CommandParams{}
+	var lastTag string
+
+	// Open the file for buffer based read.
+	fileBuf, err := os.Open(filename)
+	if err != nil {
+		return job, err
+	}
+
+	// Defer file handle closing.
+	defer func() {
+		if err = fileBuf.Close(); err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+	}()
+
+	// Create a file scanner for reading the lines of the file.
+	scanner := bufio.NewScanner(fileBuf)
+
+	// Read the file line by line.
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Ignore any blank or commented lines.
+		if IgnoreLine(line) {
+			continue
+		}
+
+		// Get the line tag and assigned value.
+		tag, val := ParseLine(line)
+
+		if (tag == "JOB_NAME") && (lastTag == "ARGUMENT" || lastTag == "OPTION") {
+			// Finalize the command and add command to array once we hit the next command block.
+			command.Preamble = commandPreamble
+			command.CommandParams = CommandParams
+			commands = append(commands, command)
+
+			// Reset the objects.
+			commandPreamble = datamodels.CommandPreamble{}
+			command = datamodels.Command{}
+			CommandParams = datamodels.CommandParams{}
+			lastTag = ""
+		}
+
+		if tag == "JOB_NAME" {
+			// Set the command name.
+			command.CommandName = val
+		}
+
+		// Set batch preamble
+		if IsBatchPreamble(tag) {
+			setBatchPreamble(tag, val, &command)
+		}
+
+		// Set slurm preamble
+		if IsSlurmPreamble(tag) {
+			setSlurmPreamble(tag, val, &slurmPreamble)
+		}
+
+		// Set command preamble
+		if IsCommandPreamble(tag) {
+			setCommandPreamble(tag, val, &commandPreamble)
+		}
+
+		// Get and set the parameters.
+		setCommandParams(tag, val, &CommandParams)
+		lastTag = tag
+	}
+
+	// If there was an error with the scan, panic!
+	err = scanner.Err()
+	if err != nil {
+		return job, err
+	}
+
+	// Handle the last script def that was parsed before scanner ended.
+	job.SlurmPreamble = slurmPreamble
+	command.Preamble = commandPreamble
+	command.CommandParams = CommandParams
+	commands = append(commands, command)
+
+	// Assign the commands to the job.
+	job.Commands = commands
+	return job, nil
+}
+
+/* -----------------------------------------------------------------------------
+ * JSON helpers
+ * -------------------------------------------------------------------------- */
+
 func isBatchCommand(jsonParsed *gabs.Container) (bool, error) {
 	var err error
 
@@ -88,10 +187,10 @@ func isBatchCommand(jsonParsed *gabs.Container) (bool, error) {
 func samplesFileFromJSON(jsonParsed *gabs.Container) (string, error) {
 	if jsonParsed.Exists("samples_file") {
 		return jsonParsed.Path("samples_file").Data().(string), nil
-	} else {
-		err := errors.New(`JSON error: Missing parameter "samples_file"`)
-		return "", err
 	}
+
+	err := errors.New(`JSON error: Missing parameter "samples_file"`)
+	return "", err
 }
 
 func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble, error) {
@@ -218,7 +317,7 @@ func commandParamsFromJSON(jsonParsed *gabs.Container) (datamodels.CommandParams
 func commandOptionsFromJSON(jsonParsed *gabs.Container) []string {
 	var options = make([]string, 0)
 	for _, c := range jsonParsed.Path("options").Children() {
-		options = append(options, c.Path("option").Data().(string))
+		options = append(options, c.Data().(string))
 	}
 	return options
 }
@@ -231,116 +330,34 @@ func commandArgumentsFromJSON(jsonParsed *gabs.Container) []string {
 	return arguments
 }
 
-func JobGen(scanner *bufio.Scanner) (datamodels.Job, error) {
-	var job = datamodels.Job{}
-	var commands = make([]datamodels.Command, 0)
-	var command = datamodels.Command{}
-	var slurmPreamble = datamodels.SlurmPreamble{}
-	var commandPreamble = datamodels.CommandPreamble{}
-	var CommandParams = datamodels.CommandParams{}
-	var lastTag string
+/* -----------------------------------------------------------------------------
+ * Plaintext helpers
+ * -------------------------------------------------------------------------- */
 
-	// Read the file line by line.
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Ignore any blank or commented lines.
-		if IgnoreLine(line) {
-			continue
-		}
-
-		// Get the line tag and assigned value.
-		tag, val := ParseLine(line)
-
-		if (tag == "JOB_NAME") && (lastTag == "ARGUMENT" || lastTag == "OPTION") {
-			// Finalize the command and add command to array once we hit the next command block.
-			command.Preamble = commandPreamble
-			command.CommandParams = CommandParams
-			commands = append(commands, command)
-
-			// Reset the objects.
-			commandPreamble = datamodels.CommandPreamble{}
-			command = datamodels.Command{}
-			CommandParams = datamodels.CommandParams{}
-			lastTag = ""
-		}
-
-		if tag == "JOB_NAME" {
-			// Set the command name.
-			command.CommandName = val
-		}
-
-		// Set batch preamble
-		if IsBatchPreamble(tag) {
-			setBatchPreamble(tag, val, &command)
-		}
-
-		// Set slurm preamble
-		if IsSlurmPreamble(tag) {
-			setSlurmPreamble(tag, val, &slurmPreamble)
-		}
-
-		// Set command preamble
-		if IsCommandPreamble(tag) {
-			setCommandPreamble(tag, val, &commandPreamble)
-		}
-
-		// Get and set the parameters.
-		setCommandParams(tag, val, &CommandParams)
-		lastTag = tag
+func setSlurmPreamble(tag, val string, slurmPreamble *datamodels.SlurmPreamble) {
+	if tag == "JOB_NAME" {
+		slurmPreamble.JobName = val
+	} else if tag == "PARTITION" {
+		slurmPreamble.Partition = val
+	} else if tag == "EMAIL_BEGIN" {
+		slurmPreamble.EmailBegin, _ = strconv.ParseBool(val)
+	} else if tag == "EMAIL_END" {
+		slurmPreamble.EmailEnd, _ = strconv.ParseBool(val)
+	} else if tag == "EMAIL_FAIL" {
+		slurmPreamble.EmailFail, _ = strconv.ParseBool(val)
+	} else if tag == "EMAIL_ADDRESS" {
+		slurmPreamble.EmailAddress = val
 	}
-
-	// If there was an error with the scan, panic!
-	err := scanner.Err()
-	if err != nil {
-		panic(err)
-	}
-
-	// Handle the last script def that was parsed before scanner ended.
-	job.SlurmPreamble = slurmPreamble
-	command.Preamble = commandPreamble
-	command.CommandParams = CommandParams
-	commands = append(commands, command)
-
-	// Assign the commands to the job.
-	job.Commands = commands
-	return job, nil
 }
 
-func setSlurmParams(tag, val string, SlurmParams *datamodels.SlurmParams, CommandParams *datamodels.CommandParams) {
-	// if tag == "JOB_NAME" {
-	// 	SlurmParams.JobName = val
-	// } else if tag == "PARTITION" {
-	// 	SlurmParams.Partition = val
-	// } else if tag == "NOTIFICATION_BEGIN" {
-	// 	SlurmParams.NotificationBegin, _ = strconv.ParseBool(val)
-	// } else if tag == "NOTIFICATION_END" {
-	// 	SlurmParams.NotificationEnd, _ = strconv.ParseBool(val)
-	// } else if tag == "NOTIFICATION_FAIL" {
-	// 	SlurmParams.NotificationFail, _ = strconv.ParseBool(val)
-	// } else if tag == "NOTIFICATION_EMAIL" {
-	// 	SlurmParams.NotificationEmail = val
-	// } else if tag == "TASKS" {
-	// 	SlurmParams.Tasks, _ = strconv.ParseInt(val, 10, 64)
-	// } else if tag == "CPUS" {
-	// 	SlurmParams.CPUs, _ = strconv.ParseInt(val, 10, 64)
-	// } else if tag == "MEMORY" {
-	// 	SlurmParams.Memory, _ = strconv.ParseInt(val, 10, 64)
-	// } else if tag == "SINGULARITY_PATH" {
-	// 	CommandParams.SingularityPath = val
-	// } else if tag == "SINGULARITY_IMAGE" {
-	// 	CommandParams.SingularityImage = val
-	// } else if tag == "WORK_DIR" {
-	// 	CommandParams.WorkDir = val
-	// } else if tag == "VOLUME" {
-	// 	CommandParams.Volume = val
-	// } else if tag == "COMMAND" {
-	// 	CommandParams.Command = val
-	// } else if tag == "OPTION" {
-	// 	CommandParams.CommandOptions = append(CommandParams.CommandOptions, val)
-	// } else if tag == "ARGUMENT" {
-	// 	CommandParams.CommandArgs = append(CommandParams.CommandArgs, val)
-	// }
+func setCommandPreamble(tag, val string, commandPreamble *datamodels.CommandPreamble) {
+	if tag == "TASKS" {
+		commandPreamble.Tasks, _ = strconv.ParseInt(val, 10, 64)
+	} else if tag == "CPUS" {
+		commandPreamble.CPUs, _ = strconv.ParseInt(val, 10, 64)
+	} else if tag == "MEMORY" {
+		commandPreamble.Memory, _ = strconv.ParseInt(val, 10, 64)
+	}
 }
 
 func setCommandParams(tag, val string, params *datamodels.CommandParams) {
@@ -368,29 +385,5 @@ func setBatchPreamble(tag, val string, cmd *datamodels.Command) {
 		cmd.Batch = true
 	} else if tag == "SAMPLES_FILE" {
 		cmd.SamplesFile = val
-	}
-}
-
-func setSlurmPreamble(tag, val string, preamble *datamodels.SlurmPreamble) {
-	if tag == "PARTITION" {
-		preamble.Partition = val
-	} else if tag == "NOTIFICATION_BEGIN" {
-		preamble.EmailBegin, _ = strconv.ParseBool(val)
-	} else if tag == "NOTIFICATION_END" {
-		preamble.EmailEnd, _ = strconv.ParseBool(val)
-	} else if tag == "NOTIFICATION_FAIL" {
-		preamble.EmailFail, _ = strconv.ParseBool(val)
-	} else if tag == "NOTIFICATION_EMAIL" {
-		preamble.EmailAddress = val
-	}
-}
-
-func setCommandPreamble(tag, val string, preamble *datamodels.CommandPreamble) {
-	if tag == "TASKS" {
-		preamble.Tasks, _ = strconv.ParseInt(val, 10, 64)
-	} else if tag == "CPUS" {
-		preamble.CPUs, _ = strconv.ParseInt(val, 10, 64)
-	} else if tag == "MEMORY" {
-		preamble.Memory, _ = strconv.ParseInt(val, 10, 64)
 	}
 }

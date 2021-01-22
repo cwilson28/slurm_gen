@@ -12,7 +12,7 @@
 			"command": "trim_galore",
 			"batch": true,
 			"tasks": 1,
-			"cpus": 4,
+			"cpus": 3,
 			"memory": 128,
 			"singularity_path": "/home/cwilson/compbio/docker",
 			"singularity_image": "trimgalore_v0_6_5.sif",
@@ -20,7 +20,7 @@
 			"volume": "/home/cwilson/compbio/",
 			"options": [
 				{
-					"option": "--cores 4"
+					"option": "--cores 3"
 				},
 				{
 					"option": "--fastqc_args '--noextract'"
@@ -50,7 +50,7 @@
 					"option": "--quality 20"
 				},
 				{
-					"option": "--output_dir"
+					"option": "--output_dir /compbio/analysis/JamesGodwin/jgodwin_001.AmbyAmp1"
 				}
 			]
 		}
