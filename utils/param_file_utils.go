@@ -8,7 +8,8 @@ import "strings"
 
 func IsJSONParam(filename string) bool {
 	chunks := strings.Split(filename, ".")
-	if chunks[1] == "json" {
+	extnIndex := len(chunks) - 1
+	if chunks[extnIndex] == "json" {
 		return true
 	}
 

@@ -325,7 +325,7 @@ func commandOptionsFromJSON(jsonParsed *gabs.Container) []string {
 func commandArgumentsFromJSON(jsonParsed *gabs.Container) []string {
 	var arguments = make([]string, 0)
 	for _, c := range jsonParsed.Path("arguments").Children() {
-		arguments = append(arguments, c.Path("arg").Data().(string))
+		arguments = append(arguments, c.Data().(string))
 	}
 	return arguments
 }
