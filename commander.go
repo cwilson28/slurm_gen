@@ -50,6 +50,7 @@ func main() {
 	slurmFlag := flag.Lookup("slurm")
 	if slurmFlag.Value.String() == "true" {
 		slurm = true
+		platform = "slurm"
 	}
 
 	/* -------------------------------------------------------------------------
@@ -58,6 +59,7 @@ func main() {
 	sgeFlag := flag.Lookup("sge")
 	if sgeFlag.Value.String() == "true" {
 		sge = true
+		platform = "sge"
 	}
 
 	if sge == false && slurm == false {
