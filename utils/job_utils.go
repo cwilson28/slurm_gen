@@ -12,6 +12,8 @@ import (
 	"github.com/Jeffail/gabs"
 )
 
+var Platform string
+
 /* -----------------------------------------------------------------------------
  * Generate job object from JSON.
  * -------------------------------------------------------------------------- */
@@ -32,11 +34,19 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	}
 
 	// Extract and set slurm preamble.
-	slurmPreamble, err := slurmPreambleFromJSON(jsonParsed)
-	if err != nil {
-		return job, err
+	if Platform == "slurm" {
+		slurmPreamble, err := slurmPreambleFromJSON(jsonParsed)
+		if err != nil {
+			return job, err
+		}
+		job.SlurmPreamble = slurmPreamble
+	} else if Platform == "sge" {
+		sgePreamble, err := sgePreambleFromJSON(jsonParsed)
+		if err != nil {
+			return job, err
+		}
+		job.SGEPreamble = sgePreamble
 	}
-	job.SlurmPreamble = slurmPreamble
 
 	// Get and set the sample file name.
 	sampleFile, err := samplesFileFromJSON(jsonParsed)
@@ -237,6 +247,42 @@ func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble
 		preamble.EmailAddress = jsonParsed.Path("email_address").Data().(string)
 	} else {
 		err = errors.New(`JSON error: Missing parameter "email_address"`)
+		return preamble, err
+	}
+
+	return preamble, nil
+}
+
+func sgePreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SGEPreamble, error) {
+	var err error
+	var preamble = datamodels.SGEPreamble{}
+
+	if jsonParsed.Exists("current_directory") {
+		preamble.CWD = jsonParsed.Path("current_directory").Data().(bool)
+	} else {
+		preamble.CWD = false
+	}
+	if jsonParsed.Exists("join_output") {
+		preamble.JoinOutput = jsonParsed.Path("join_output").Data().(bool)
+	} else {
+		preamble.JoinOutput = false
+	}
+	if jsonParsed.Exists("email_address") {
+		preamble.EmailAddress = jsonParsed.Path("email_address").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "email_address"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("parallel_environment") {
+		preamble.ParallelEnv = jsonParsed.Path("parallel_environment").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "parallel_environment"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("memory") {
+		preamble.ParallelEnv = jsonParsed.Path("memory").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "memory"`)
 		return preamble, err
 	}
 

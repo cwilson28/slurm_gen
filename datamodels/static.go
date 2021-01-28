@@ -43,18 +43,33 @@ var JOB_SHIT = map[string]string{
 }
 
 var HELP_MSG = `
-	Usage: slurm_gen [--options]
+	Usage: commander [--options] <param_file>
 
-	Summary: slurm_gen is a command line tool for generating scripts to be submitted
-	to the slurm scheduler with sbatch.
+	Summary: commander is a command line tool for generating reproducible
+	bioinformatics tools scripts that can be run in different computational
+	environments. 
 
-	Available Options:
+	Currently, commander can generate scripts for Slurm and SGE clusters.
+
+	Options:
+	--slurm: Tells commander that the scripts should be written for submission to a Slurm cluster.
+	--sge:   Tells commander that the scripts should be written for submission to a SGE cluster
+
+	Arguments:
+	A single parameter file that defines the workflow to be executed.
 	
-	--params: full path to the parameters file defining your tool pipeline
-	--pipeline: will invoke the pipeline option and will generate a full pipeline script
-
 	Example usage:
 
-	slurm_gen --params /home/username/fastqc_params.txt
-	Output: fastqc.slurm
+	# With parameters specified in JSON format.
+	commander --slurm worflow-params.json
+
+	# With parameters specified in plaintext format.
+	commander --sge workflow-params.txt
+
+	Output:
+	If the --slurm option is provided, commander will produce a main .slurm file that can
+	be submitted to a Slurm cluster using sbatch.
+
+	If the --sge options is provided, commander will produce a main .qsub file that can be
+	submitted to a SGE cluster using qsub.
 `

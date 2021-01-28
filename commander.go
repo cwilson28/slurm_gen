@@ -17,11 +17,14 @@ func ShowHelp() {
 func main() {
 	var err error
 	var job datamodels.Job
-	var submit bool
+	var platform string
+	var sge, slurm, submit bool
 
 	// Declare command line flags.
 	flag.Bool("help", false, "Show help message")
 	flag.Bool("submit", false, "Submit job on the user's behalf")
+	flag.Bool("slurm", false, "Job will be run on a Slurm cluster")
+	flag.Bool("sge", false, "Job will be run on SGE cluster")
 	flag.Parse()
 
 	/* -------------------------------------------------------------------------
@@ -34,12 +37,33 @@ func main() {
 	}
 
 	/* -------------------------------------------------------------------------
-	 * Check for the help param and display help message if provided.
+	 * Check for the submit flag
 	 * ---------------------------------------------------------------------- */
 	submitFlag := flag.Lookup("submit")
 	if submitFlag.Value.String() == "true" {
 		submit = true
-		fmt.Println(submit)
+	}
+
+	/* -------------------------------------------------------------------------
+	 * Check for the slurm flag
+	 * ---------------------------------------------------------------------- */
+	slurmFlag := flag.Lookup("slurm")
+	if slurmFlag.Value.String() == "true" {
+		slurm = true
+	}
+
+	/* -------------------------------------------------------------------------
+	 * Check for the sge flag
+	 * ---------------------------------------------------------------------- */
+	sgeFlag := flag.Lookup("sge")
+	if sgeFlag.Value.String() == "true" {
+		sge = true
+	}
+
+	if sge == false && slurm == false {
+		log.Print("Error: You must specify a compute environment.")
+		ShowHelp()
+		os.Exit(1)
 	}
 
 	/* -------------------------------------------------------------------------
@@ -58,6 +82,8 @@ func main() {
 	 * We are supporting both plain text and json param files.
 	 * ---------------------------------------------------------------------- */
 
+	// Set the platform variable in the utils package.
+	utils.Platform = platform
 	if utils.IsJSONParam(paramFile) {
 		fmt.Println("Parsing JSON parameter file...")
 		job, err = utils.ParseJSONParams(paramFile)
@@ -82,4 +108,8 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("Done.")
+
+	if submit {
+		fmt.Println("submit")
+	}
 }

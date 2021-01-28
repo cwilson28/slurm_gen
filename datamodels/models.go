@@ -14,6 +14,15 @@ type SlurmPreamble struct {
 	EmailAddress string
 	WallTime     string
 }
+type SGEPreamble struct {
+	CWD          bool
+	JoinOutput   bool
+	Shell        string
+	EmailAddress string
+	ParallelEnv  string
+	Memory       string
+	WallTime     string
+}
 
 type CommandPreamble struct {
 	Tasks  int64
@@ -34,6 +43,7 @@ type CommandParams struct {
 
 type Job struct {
 	SlurmPreamble SlurmPreamble
+	SGEPreamble   SGEPreamble
 	Commands      []Command
 	SamplesFile   string
 }
