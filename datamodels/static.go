@@ -13,6 +13,16 @@ var SLURM_PREAMBLE = map[string]string{
 	"job_log":       "#SBATCH --output=%s_%%j.log",
 }
 
+var SGE_PREAMBLE = map[string]string{
+	"header":               "#!/bin/bash",
+	"cwd":                  "#$ -cwd",
+	"join_output":          "#$ -j y",
+	"shell":                "#$ -S %s",
+	"email":                "#$ -M %s -m be",
+	"parallel_environment": "#$ -pe %s",
+	"memory":               "#$ -l %s",
+}
+
 var COMMAND_PREAMBLE = map[string]string{
 	"job_name": "#SBATCH --job-name=%s",
 	"tasks":    "#SBATCH --ntasks=%d",
