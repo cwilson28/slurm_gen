@@ -23,8 +23,8 @@ func main() {
 	// Declare command line flags.
 	flag.Bool("help", false, "Show help message")
 	flag.Bool("submit", false, "Submit job on the user's behalf")
-	flag.Bool("slurm", false, "Job will be run on a Slurm cluster")
-	flag.Bool("sge", false, "Job will be run on SGE cluster")
+	flag.Bool("slurm", false, "Generate scripts for a Slurm cluster")
+	flag.Bool("sge", false, "Generate scripts for a SGE cluster")
 	flag.Parse()
 
 	/* -------------------------------------------------------------------------
