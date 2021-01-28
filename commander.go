@@ -21,8 +21,6 @@ func main() {
 
 	// Declare command line flags.
 	flag.Bool("help", false, "Show help message")
-	flag.String("params", "", "Full path to job parameter file")
-	flag.Bool("pipeline", false, "Generate an accompanying pipeline script")
 	flag.Bool("submit", false, "Submit job on the user's behalf")
 	flag.Parse()
 

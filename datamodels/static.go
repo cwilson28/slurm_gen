@@ -27,6 +27,8 @@ var MORE_JOBSHIT = []string{
 	"pwd; hostname; date",
 	`echo "====================================================="`,
 	"",
+	"# Load the compbio module",
+	"module load compbio",
 	"# Load the singularity module",
 	"module load singularity",
 	"export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH",

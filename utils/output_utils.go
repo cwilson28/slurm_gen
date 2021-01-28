@@ -243,6 +243,7 @@ func writeSingularityPreamble(outfile *os.File, cmd datamodels.Command) {
 	// Write singularity shit.
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
+	// fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityImage)))
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
 }
 
@@ -255,8 +256,7 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--outFileNamePrefix" {
 			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
-		}
-		if chunks[0] == "--readFilesIn" {
+		} else if chunks[0] == "--readFilesIn" {
 			opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
 		}
 		writeCommandOption(outfile, opt)
@@ -371,7 +371,7 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	}
 
 	// Write command options.
-	if command.CommandParams.Command == "star" {
+	if command.CommandParams.Command == "STAR" {
 		// Format and write star specific options
 		writeStarCommandOptions(outfile, command, sample)
 	} else if command.CommandParams.Command == "trim_galore" {
