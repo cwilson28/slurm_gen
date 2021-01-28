@@ -99,7 +99,7 @@ func writeSlurmJobPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble
  * This will probably be omitted in the future.
  *  --- */
 func writeIntermediateJobShit(slurmFile *os.File) {
-	for _, line := range datamodels.MORE_JOBSHIT {
+	for _, line := range datamodels.INTERMEDIATE_SLURM_SHIT {
 		fmt.Fprintln(slurmFile, line)
 	}
 }

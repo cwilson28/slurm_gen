@@ -31,7 +31,7 @@ var COMMAND_PREAMBLE = map[string]string{
 	"time":     "#SBATCH --time=%s",
 }
 
-var MORE_JOBSHIT = []string{
+var INTERMEDIATE_SLURM_SHIT = []string{
 	"",
 	`echo "====================================================="`,
 	"pwd; hostname; date",
