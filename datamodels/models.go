@@ -121,6 +121,13 @@ func (p *SlurmPreamble) NotificationType() string {
 	return notifications
 }
 
+func (s *Sample) IsPairedEnd() bool {
+	if s.ReverseReadFile == "" {
+		return false
+	}
+	return true
+}
+
 func (s *Sample) DumpReadFiles() string {
 	readFileString := fmt.Sprintf("%s/%s", s.SamplePath, s.ForwardReadFile)
 	if s.ReverseReadFile != "" {

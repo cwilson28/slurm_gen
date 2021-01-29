@@ -301,8 +301,11 @@ func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sam
 func writeTrimGaloreArguments(outfile *os.File, sample datamodels.Sample) {
 	// Write the forward read file arg to the script.
 	writeCommandArg(outfile, sample.DumpForwardReadFileWithPath())
-	// Write the reverse read file arg to the script.
-	writeCommandArg(outfile, sample.DumpReverseReadFileWithPath())
+
+	if sample.IsPairedEnd() {
+		// Write the reverse read file arg to the script.
+		writeCommandArg(outfile, sample.DumpReverseReadFileWithPath())
+	}
 }
 
 /* ---
@@ -313,10 +316,15 @@ func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample dat
 	// First, we will write the readfiles argument.
 	// We want trimmed reads here. So drop the file extention from the readfile name.
 	noExt := true
-	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
-	reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
-	writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
-	writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
+	if sample.IsPairedEnd() {
+		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
+		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+		writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
+	} else {
+		forwardReads := fmt.Sprintf("%s/%s_trimmed.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
+	}
 
 	// Next we will write the reference argument. This will be supplied in the params.txt file
 	writeCommandArgs(outfile, command.CommandParams.CommandArgs)
