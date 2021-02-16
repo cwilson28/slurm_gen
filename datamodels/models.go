@@ -64,6 +64,8 @@ type BatchParams struct {
 }
 
 type Sample struct {
+	PI              string
+	Experiment      string
 	SamplePath      string
 	OutputPath      string
 	Prefix          string

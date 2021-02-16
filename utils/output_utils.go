@@ -17,7 +17,6 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 
 	// Open the parent slurm file
 	filename := fmt.Sprintf("%s.slurm", job.SlurmPreamble.JobName)
-	fmt.Println("HEY", filename)
 	slurmFile, err := os.Create(filename)
 	if err != nil {
 		return err
