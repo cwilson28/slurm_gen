@@ -3,4 +3,5 @@ commander
 *.sh
 *.txt
 *.json
+*.qsub
 .vscode/

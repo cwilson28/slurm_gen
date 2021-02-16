@@ -13,6 +13,7 @@ type SlurmPreamble struct {
 	EmailFail    bool
 	EmailAddress string
 	WallTime     string
+	MiscPreamble []string
 }
 type SGEPreamble struct {
 	CWD          bool

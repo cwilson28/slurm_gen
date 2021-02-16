@@ -102,14 +102,6 @@ func WriteSGEJobScript(job datamodels.Job) error {
 	// Write the slurm preamble for the parent slurm script
 	writeSGEJobPreamble(sgeFile, job.SGEPreamble)
 
-	// Write the max CPUs for this job. For pipeline jobs, this will be the
-	// max CPUs requested by any single step in the pipeline. For single command
-	// jobs, this will be the CPUs required for that command.
-	// writeJobCPU(slurmFile, job)
-
-	// Write intermediary job shit.
-	writeIntermediateJobShit(sgeFile)
-
 	/* -----------------
 	 * All slurm preamble is written at this point. All that remains is to write
 	 * command specific jargon.
@@ -163,6 +155,9 @@ func writeSlurmJobPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["time"], preamble.WallTime)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], preamble.JobName)))
 	fmt.Fprintln(slurmFile)
+
+	// Write any misc preamble
+	writeMiscPreamble(slurmFile, preamble.MiscPreamble)
 }
 
 /* ---
@@ -187,14 +182,14 @@ func writeSGEJobPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
 	fmt.Fprintln(sgeFile)
 
 	// Write any misc preamble
-	writeMiscPreamble(sgeFile, preamble)
+	writeMiscPreamble(sgeFile, preamble.MiscPreamble)
 }
 
 /* ---
  * Write misc preamble
  * --- */
-func writeMiscPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
-	for _, line := range preamble.MiscPreamble {
+func writeMiscPreamble(sgeFile *os.File, preamble []string) {
+	for _, line := range preamble {
 		fmt.Fprintln(sgeFile, fmt.Sprintf(line))
 	}
 }
