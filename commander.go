@@ -103,13 +103,23 @@ func main() {
 	}
 
 	// Write the job files.
-	fmt.Println("Writing job scripts...")
-	err = utils.WriteSlurmJobScript(job)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+	if slurm {
+		fmt.Println("Writing slurm job scripts...")
+		err = utils.WriteSlurmJobScript(job)
+		if err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+		fmt.Println("Done.")
+	} else if sge {
+		fmt.Println("Writing sge job scripts...")
+		err = utils.WriteSGEJobScript(job)
+		if err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+		fmt.Println("Done.")
 	}
-	fmt.Println("Done.")
 
 	if submit {
 		fmt.Println("submit")

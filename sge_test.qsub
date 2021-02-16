@@ -1,0 +1,53 @@
+#!/bin/bash
+#$ -cwd
+#$ -j y
+#$ -S /bin/bash
+#$ -M deej@bowdoin.edu -m be
+#$ -pe smp 16
+#$ -l virtual_free=12g
+
+# Please note memory is assigned per CPU core
+# "-pe smp 16" and "-l virtual_free=12g" will give you 192 Gb (16 x 12)
+
+# Top level course space
+classdirectory="/mnt/courses/biol2566"
+
+# HPC directory for temporary runtime files
+hpctmp="/mnt/hpc/tmp/"$USER
+
+# Working directory is $hpctmp/"trinity-"$JOB_ID
+# JOB_ID is the SGE job number
+
+echo "===================================================================="
+pwd; hostname; date
+echo "Reading data from" $classdirectory"/data/test_data"
+echo "Working directory is" $hpctmp"/trinity-work-"$JOB_ID
+echo "Output directory is" $hpctmp"/trinity-"$JOB_ID
+echo "Copying final output to" $classdirectory"/people/"$USER"/"$JOB_ID
+echo "===================================================================="
+
+mkdir -p $hpctmp/trinity-$JOB_ID
+mkdir -p $hpctmp/trinity-work-$JOB_ID
+mkdir -p $classdirectory/people/$USER/$JOB_ID
+
+singularity run --bind $classdirectory:/compbio,$hpctmp:/hpctmp \
+$classdirectory/software/trinity_v_latest.sif \
+Trinity \
+--seqType fq \
+--normalize_by_read_set \
+--normalize_max_read_cov 20 \
+--samples_file /compbio/data/test_data/testdata.samples.txt \
+--trimmomatic \
+--include_supertranscripts \
+--max_memory 192G \
+--CPU 16 \
+--full_cleanup \
+--workdir /hpctmp/trinity-work-$JOB_ID \
+--output /hpctmp/trinity-$JOB_ID
+
+# sync and wait for a bit
+sync
+sleep 60s
+
+# copy final output file from temporary working directory
+cp $hpctmp/trinity-$JOB_ID.Trinity.* $classdirectory/people/$USER/$JOB_ID

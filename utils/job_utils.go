@@ -153,7 +153,7 @@ func ParsePlainTextParams(filename string) (datamodels.Job, error) {
 		}
 
 		// Set command preamble
-		if IsCommandPreamble(tag) {
+		if IsSlurmCommandPreamble(tag) {
 			setCommandPreamble(tag, val, &commandPreamble)
 		}
 
@@ -273,6 +273,12 @@ func sgePreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SGEPreamble, er
 		err = errors.New(`JSON error: Missing parameter "email_address"`)
 		return preamble, err
 	}
+	if jsonParsed.Exists("shell") {
+		preamble.Shell = jsonParsed.Path("shell").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "parallel_environment"`)
+		return preamble, err
+	}
 	if jsonParsed.Exists("parallel_environment") {
 		preamble.ParallelEnv = jsonParsed.Path("parallel_environment").Data().(string)
 	} else {
@@ -280,7 +286,13 @@ func sgePreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SGEPreamble, er
 		return preamble, err
 	}
 	if jsonParsed.Exists("memory") {
-		preamble.ParallelEnv = jsonParsed.Path("memory").Data().(string)
+		preamble.Memory = jsonParsed.Path("memory").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "memory"`)
+		return preamble, err
+	}
+	if jsonParsed.Exists("misc_preamble") {
+		preamble.MiscPreamble = miscPreamble(jsonParsed)
 	} else {
 		err = errors.New(`JSON error: Missing parameter "memory"`)
 		return preamble, err
@@ -432,4 +444,13 @@ func setBatchPreamble(tag, val string, cmd *datamodels.Command) {
 	} else if tag == "SAMPLES_FILE" {
 		cmd.SamplesFile = val
 	}
+}
+
+func miscPreamble(container *gabs.Container) []string {
+	var lines = make([]string, 0)
+	children := container.Path("misc_preamble").Children()
+	for _, child := range children {
+		lines = append(lines, child.Data().(string))
+	}
+	return lines
 }

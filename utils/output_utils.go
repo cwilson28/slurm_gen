@@ -78,6 +78,76 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 }
 
 /* -----------------------------------------------------------------------------
+ * The main function for writing an SGE script.
+ * -------------------------------------------------------------------------- */
+func WriteSGEJobScript(job datamodels.Job) error {
+	var err error
+
+	fmt.Println("Writing sge script preamble...")
+
+	// Open the parent sge script
+	// filename := fmt.Sprintf("%s.qsub", job.SGEPreamble.JobName)
+	filename := "testfile.qsub"
+	sgeFile, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err = sgeFile.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Write the slurm preamble for the parent slurm script
+	writeSGEJobPreamble(sgeFile, job.SGEPreamble)
+
+	// Write the max CPUs for this job. For pipeline jobs, this will be the
+	// max CPUs requested by any single step in the pipeline. For single command
+	// jobs, this will be the CPUs required for that command.
+	// writeJobCPU(slurmFile, job)
+
+	// Write intermediary job shit.
+	writeIntermediateJobShit(sgeFile)
+
+	/* -----------------
+	 * All slurm preamble is written at this point. All that remains is to write
+	 * command specific jargon.
+	 * -------------- */
+
+	// If there are multiple commands, it is safe to assume we are generating
+	// a slurm script for a pipeline. Write the command details in a pipeline
+	// format.
+	if len(job.Commands) > 1 {
+		fmt.Println("Writing pipeline slurm script...")
+		err = writePipelineSlurmScript(sgeFile, job)
+		return err
+	}
+
+	// There is a single command, we will either write this as as single .slurm
+	// file or as a batch slurm file depending on the command definition.
+	// Since there is only a single command, grab the 0th command object.
+	cmd := job.Commands[0]
+
+	// If this is a batch command, write the required batch scripts.
+	// TODO: Make this batch bash script writing into a function. It's being used
+	// more than once.
+	if cmd.Batch {
+		fmt.Println("Writing command script...")
+		err = writeBatchCommand(sgeFile, cmd, job)
+		return err
+	}
+
+	// TODO: Revisit this.
+	// The command is not a batch command, write the command to the slurm file
+	// we opened earlier.
+	writeCommandPreamble(sgeFile, cmd.Preamble)
+	writeCommandOptions(sgeFile, cmd.CommandParams.CommandOptions)
+	writeCommandArgs(sgeFile, cmd.CommandParams.CommandArgs)
+	return nil
+}
+
+/* -----------------------------------------------------------------------------
  * Various helper functions.
  * -------------------------------------------------------------------------- */
 
@@ -93,6 +163,40 @@ func writeSlurmJobPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["time"], preamble.WallTime)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], preamble.JobName)))
 	fmt.Fprintln(slurmFile)
+}
+
+/* ---
+ * Write the sge job preamble to a .qsub file.
+ * --- */
+func writeSGEJobPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
+	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", datamodels.SGE_PREAMBLE["header"]))
+	/* --- Handle boolean flags in the parameter file. --- */
+	// Use current working directory
+	if preamble.CWD {
+		fmt.Fprintln(sgeFile, fmt.Sprintf(datamodels.SGE_PREAMBLE["cwd"]))
+	}
+	// Join output
+	if preamble.JoinOutput {
+		fmt.Fprintln(sgeFile, fmt.Sprintf(datamodels.SGE_PREAMBLE["join_output"]))
+	}
+
+	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SGE_PREAMBLE["shell"], preamble.Shell)))
+	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SGE_PREAMBLE["email"], preamble.EmailAddress)))
+	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SGE_PREAMBLE["parallel_environment"], preamble.ParallelEnv)))
+	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SGE_PREAMBLE["memory"], preamble.Memory)))
+	fmt.Fprintln(sgeFile)
+
+	// Write any misc preamble
+	writeMiscPreamble(sgeFile, preamble)
+}
+
+/* ---
+ * Write misc preamble
+ * --- */
+func writeMiscPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
+	for _, line := range preamble.MiscPreamble {
+		fmt.Fprintln(sgeFile, fmt.Sprintf(line))
+	}
 }
 
 /* ---

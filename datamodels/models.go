@@ -21,7 +21,7 @@ type SGEPreamble struct {
 	EmailAddress string
 	ParallelEnv  string
 	Memory       string
-	WallTime     string
+	MiscPreamble []string
 }
 
 type CommandPreamble struct {

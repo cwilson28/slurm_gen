@@ -45,6 +45,28 @@ var INTERMEDIATE_SLURM_SHIT = []string{
 	"",
 }
 
+var SGE_DIRECTORY_PREAMBLE = []string{
+	`# Top level course space`,
+	`classdirectory="/mnt/courses/biol2566"`,
+	``,
+	`# HPC directory for temporary runtime files`,
+	`hpctmp="/mnt/hpc/tmp/"$USER`,
+	``,
+}
+
+var INTERMEDIATE_SGE_SHIT = []string{
+	`# Working directory is $hpctmp/"trinity-"$JOB_ID`,
+	`# JOB_ID is the SGE job number`,
+	``,
+	`echo "===================================================================="`,
+	`pwd; hostname; date`,
+	`echo "Reading data from" $classdirectory"/data/test_data"`,
+	`echo "Working directory is" $hpctmp"/trinity-work-"$JOB_ID`,
+	`echo "Output directory is" $hpctmp"/trinity-"$JOB_ID`,
+	`echo "Copying final output to" $classdirectory"/people/"$USER"/"$JOB_ID`,
+	`echo "===================================================================="`,
+}
+
 var JOB_SHIT = map[string]string{
 	"singularity_cmd":  "singularity run \\",
 	"singularity_bind": "--bind %s:/compbio \\",

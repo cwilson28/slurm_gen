@@ -88,7 +88,7 @@ func IsBatchPreamble(tag string) bool {
 }
 
 /* ---
- * Check if a line is slurm preamble.
+ * Check if a line contains slurm preamble.
  * --- */
 func IsSlurmPreamble(tag string) bool {
 	if tag == "PARTITION" ||
@@ -102,9 +102,39 @@ func IsSlurmPreamble(tag string) bool {
 }
 
 /* ---
- * Check if a line is command preamble.
+ * Check if a line contains slurm command preamble.
  * --- */
-func IsCommandPreamble(tag string) bool {
+func IsSlurmCommandPreamble(tag string) bool {
+	if tag == "BATCH" ||
+		tag == "SAMPLES_FILE" ||
+		tag == "JOB_NAME" ||
+		tag == "TASKS" ||
+		tag == "CPUS" ||
+		tag == "MEMORY" ||
+		tag == "TIME" {
+		return true
+	}
+	return false
+}
+
+/* ---
+ * Check if a line contains sge preamble.
+ * --- */
+func IsSGEPreamble(tag string) bool {
+	if tag == "PARTITION" ||
+		tag == "NOTIFICATION_BEGIN" ||
+		tag == "NOTIFICATION_END" ||
+		tag == "NOTIFICATION_FAIL" ||
+		tag == "NOTIFICATION_EMAIL" {
+		return true
+	}
+	return false
+}
+
+/* ---
+ * Check if a line contains sge command preamble.
+ * --- */
+func IsSGECommandPreamble(tag string) bool {
 	if tag == "BATCH" ||
 		tag == "SAMPLES_FILE" ||
 		tag == "JOB_NAME" ||
