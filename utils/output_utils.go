@@ -71,7 +71,7 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 	// TODO: Revisit this.
 	// The command is not a batch command, write the command to the slurm file
 	// we opened earlier.
-	writeCommandPreamble(slurmFile, cmd.Preamble)
+	writeSlurmCommandPreamble(slurmFile, cmd.Preamble)
 	writeCommandOptions(slurmFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(slurmFile, cmd.CommandParams.CommandArgs)
 	return nil
@@ -110,11 +110,11 @@ func WriteSGEJobScript(job datamodels.Job) error {
 	// If there are multiple commands, it is safe to assume we are generating
 	// a slurm script for a pipeline. Write the command details in a pipeline
 	// format.
-	if len(job.Commands) > 1 {
-		fmt.Println("Writing pipeline slurm script...")
-		err = writePipelineSlurmScript(sgeFile, job)
-		return err
-	}
+	// if len(job.Commands) > 1 {
+	// 	fmt.Println("Writing pipeline slurm script...")
+	// 	err = writePipelineSlurmScript(sgeFile, job)
+	// 	return err
+	// }
 
 	// There is a single command, we will either write this as as single .slurm
 	// file or as a batch slurm file depending on the command definition.
@@ -133,7 +133,7 @@ func WriteSGEJobScript(job datamodels.Job) error {
 	// TODO: Revisit this.
 	// The command is not a batch command, write the command to the slurm file
 	// we opened earlier.
-	writeCommandPreamble(sgeFile, cmd.Preamble)
+	writeSingularityPreamble(sgeFile, cmd)
 	writeCommandOptions(sgeFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(sgeFile, cmd.CommandParams.CommandArgs)
 	return nil
@@ -192,6 +192,7 @@ func writeMiscPreamble(sgeFile *os.File, preamble []string) {
 	for _, line := range preamble {
 		fmt.Fprintln(sgeFile, fmt.Sprintf(line))
 	}
+	fmt.Fprintln(sgeFile)
 }
 
 /* ---
@@ -516,7 +517,7 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 /* ---
  * Write the command preamble to a .slurm file.
  * --- */
-func writeCommandPreamble(slurmFile *os.File, preamble datamodels.CommandPreamble) {
+func writeSlurmCommandPreamble(slurmFile *os.File, preamble datamodels.CommandPreamble) {
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["tasks"], preamble.Tasks)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["cpus"], preamble.CPUs)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["memory"], preamble.Memory)))

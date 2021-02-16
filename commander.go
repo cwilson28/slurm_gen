@@ -104,7 +104,7 @@ func main() {
 
 	// Write the job files.
 	if slurm {
-		fmt.Println("Writing slurm job scripts...")
+		fmt.Println("Writing slurm job script...")
 		err = utils.WriteSlurmJobScript(job)
 		if err != nil {
 			log.Fatal(err)
@@ -112,7 +112,7 @@ func main() {
 		}
 		fmt.Println("Done.")
 	} else if sge {
-		fmt.Println("Writing sge job scripts...")
+		fmt.Println("Writing sge job script...")
 		err = utils.WriteSGEJobScript(job)
 		if err != nil {
 			log.Fatal(err)
