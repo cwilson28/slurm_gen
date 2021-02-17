@@ -12,7 +12,6 @@ import (
  * -------------------------------------------------------------------------- */
 func WriteSlurmJobScript(job datamodels.Job) error {
 	var err error
-
 	fmt.Println("Writing slurm script preamble...")
 
 	// Open the parent slurm file

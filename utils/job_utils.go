@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"commander/datamodels"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -21,6 +22,8 @@ var Platform string
 func ParseJSONParams(filename string) (datamodels.Job, error) {
 	var err error
 	var job datamodels.Job
+
+	fmt.Printf("Parsing JSON parameter file... ")
 
 	rawJSON, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -47,13 +50,6 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 		}
 		job.SGEPreamble = sgePreamble
 	}
-
-	// Get and set the sample file name.
-	sampleFile, err := samplesFileFromJSON(jsonParsed)
-	if err != nil {
-		return job, err
-	}
-	job.SamplesFile = sampleFile
 
 	// Extract the commands from the params file.
 	var cmdErr error
@@ -83,6 +79,7 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 		commands = append(commands, command)
 	}
 	job.Commands = commands
+	fmt.Printf("Done.\n")
 	return job, nil
 }
 
@@ -94,6 +91,8 @@ func ParsePlainTextParams(filename string) (datamodels.Job, error) {
 	var commandPreamble = datamodels.CommandPreamble{}
 	var CommandParams = datamodels.CommandParams{}
 	var lastTag string
+
+	fmt.Printf("Parsing plain text parameter file... ")
 
 	// Open the file for buffer based read.
 	fileBuf, err := os.Open(filename)
@@ -176,6 +175,7 @@ func ParsePlainTextParams(filename string) (datamodels.Job, error) {
 
 	// Assign the commands to the job.
 	job.Commands = commands
+	fmt.Printf("Done.\n")
 	return job, nil
 }
 

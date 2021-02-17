@@ -43,10 +43,11 @@ type CommandParams struct {
 }
 
 type Job struct {
-	SlurmPreamble SlurmPreamble
-	SGEPreamble   SGEPreamble
-	Commands      []Command
-	SamplesFile   string
+	SlurmPreamble     SlurmPreamble
+	SGEPreamble       SGEPreamble
+	Commands          []Command
+	ExperimentDetails Experiment
+	SamplesFile       string
 }
 
 type Command struct {
@@ -63,9 +64,16 @@ type BatchParams struct {
 	ReverseReads []string
 }
 
+type Experiment struct {
+	PI           string
+	Name         string
+	AnalysisID   string
+	SamplePath   string
+	AnalysisPath string
+	Samples      []Sample
+}
+
 type Sample struct {
-	PI              string
-	Experiment      string
 	SamplePath      string
 	OutputPath      string
 	Prefix          string
@@ -78,6 +86,26 @@ func (j *Job) IsPipeline() bool {
 		return true
 	}
 	return false
+}
+
+/* --- Class functions --- */
+func NewExperiment() Experiment {
+	return Experiment{
+		SamplePath:   "compbio/data",
+		AnalysisPath: "compbio/analysis",
+	}
+}
+
+func (e *Experiment) NewAnalysisID() {
+	e.AnalysisID = "1234567890"
+}
+
+func (e *Experiment) DumpSamplePath() string {
+	return fmt.Sprintf("%s/%s/%s", e.SamplePath, e.PI, e.Name)
+}
+
+func (e *Experiment) DumpAnalysisPath() string {
+	return fmt.Sprintf("%s/%s/%s/%s", e.AnalysisPath, e.PI, e.Name, e.AnalysisID)
 }
 
 func (j *Job) MaxCPUUsage() int64 {
