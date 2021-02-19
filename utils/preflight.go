@@ -146,7 +146,7 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
 		}
 		fmt.Println("Done\n")
 	}
-	// If the directory exists, check permissions.return nil
+	return nil
 }
 
 /* ---
@@ -168,6 +168,7 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 		}
 		msgBuffer = append(msgBuffer, "Done.\n")
 		msgBuffer = printMsgBuffer(msgBuffer)
+		return nil
 
 	} else if err != nil {
 		// Something went really wrong.
