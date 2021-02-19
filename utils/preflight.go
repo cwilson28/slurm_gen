@@ -123,7 +123,7 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
 		// the directory.
 		fmt.Printf("Directory %s does not exist.\n", experiment.DumpAnalysisPath())
 		fmt.Printf("Creating directory... ")
-		err = createAnalysisDirectory(experiment)
+		err = os.MkdirAll(experiment.DumpAnalysisPath(), 0755)
 		if err != nil {
 			return err
 		}
@@ -131,11 +131,6 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
 	}
 	// If the directory exists, check permissions.
 	return nil
-}
-
-func createAnalysisDirectory(experiment datamodels.Experiment) error {
-	err := os.MkdirAll(experiment.DumpAnalysisPath(), 0755)
-	return err
 }
 
 func testToolOutputDirectory(experiment datamodels.Experiment, tool string) error {
@@ -147,7 +142,7 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 		// The directory does not exist. Try to create it on user's behalf.
 		msgBuffer = append(msgBuffer, fmt.Sprintf("Output directory %s does not exist.\n", path))
 		msgBuffer = append(msgBuffer, "Creating directory... ")
-		err = createAnalysisDirectory(experiment)
+		err = os.MkdirAll(path, 0755)
 		if err != nil {
 			return err
 		}
@@ -197,7 +192,7 @@ func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool st
 		// The directory does not exist. Try to create it on user's behalf.
 		msgBuffer = append(msgBuffer, fmt.Sprintf("Sample output directory %s does not exist.\n", path))
 		msgBuffer = append(msgBuffer, "Creating directory... ")
-		err = createAnalysisDirectory(experiment)
+		err = os.MkdirAll(path, 0755)
 		if err != nil {
 			return err
 		}
@@ -236,12 +231,6 @@ func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool st
 		msgBuffer = append(msgBuffer, "Done.\n")
 	}
 	msgBuffer = printMsgBuffer(msgBuffer)
-	return err
-}
-
-func createToolDirectory(experiment datamodels.Experiment, tool string) error {
-	path := fmt.Sprintf("%s/%s", experiment.DumpAnalysisPath(), tool)
-	err := os.MkdirAll(path, 0755)
 	return err
 }
 
