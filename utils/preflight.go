@@ -25,7 +25,7 @@ func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error 
 	msgBuffer = printMsgBuffer(msgBuffer)
 
 	// Test sample files
-	msgBuffer = append(msgBuffer, "Checking existence of sample files...")
+	msgBuffer = append(msgBuffer, "Checking existence of sample files... ")
 	err = testSampleFiles(experiment)
 	if err != nil {
 		return err
@@ -59,8 +59,24 @@ func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error 
 			}
 		}
 	}
+
+	// Test configuration archive directory.
+	err = testArchiveDirectory(experiment)
+	if err != nil {
+		return err
+	}
+
+	// Test logging directory.
+	err = testLoggingDirectory(experiment)
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
+/* -----------------------------------------------------------------------------
+ * Preflight configuration preservation.
+ * -------------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------------
  * Local test helpers.
@@ -151,7 +167,7 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
 
 /* ---
  * Check for the existence of the tool output directory.
- * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<tool_name>
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/<tool_name>
  * --- */
 func testToolOutputDirectory(experiment datamodels.Experiment, tool string) error {
 	msgBuffer := newMsgBuffer()
@@ -206,7 +222,7 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 
 /* ---
  * Check the existence of the sample output directory.
- * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<tool_name>/<sample_prefix>
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/<tool_name>/<sample_prefix>
  * --- */
 func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool string) error {
 	msgBuffer := newMsgBuffer()
@@ -257,6 +273,62 @@ func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool st
 	}
 	msgBuffer = printMsgBuffer(msgBuffer)
 	return err
+}
+
+/* ---
+ * Check for the existence of the archive directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/config
+ * --- */
+func testArchiveDirectory(experiment datamodels.Experiment) error {
+	msgBuffer := newMsgBuffer()
+	archivePath := fmt.Sprintf("%s/config", experiment.DumpAnalysisPath())
+
+	// Check for the existence of the config directory.
+	_, err := os.Stat(archivePath)
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Archive directory %s does not exist.\n", archivePath))
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Creating directory... "))
+		err = os.MkdirAll(archivePath, 0755)
+		if err != nil {
+			return err
+		}
+		msgBuffer = append(msgBuffer, "Done\n")
+		msgBuffer = printMsgBuffer(msgBuffer)
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+/* ---
+ * Check for the existence of the logs directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/logs
+ * --- */
+func testLoggingDirectory(experiment datamodels.Experiment) error {
+	msgBuffer := newMsgBuffer()
+	logPath := fmt.Sprintf("%s/logs", experiment.DumpAnalysisPath())
+
+	// Check for the existence of the config directory.
+	_, err := os.Stat(logPath)
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Logging directory %s does not exist.\n", logPath))
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Creating directory... "))
+		err = os.MkdirAll(logPath, 0755)
+		if err != nil {
+			return err
+		}
+		msgBuffer = append(msgBuffer, "Done\n")
+		msgBuffer = printMsgBuffer(msgBuffer)
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 /* ---

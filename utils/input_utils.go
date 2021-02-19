@@ -68,7 +68,7 @@ func ParseDesignFile(filename string) datamodels.Experiment {
 	experiment.Samples = samples
 	// Generate new analysis id
 	experiment.NewAnalysisID()
-	fmt.Printf("Done.\n")
+	fmt.Printf("Done.\n\n")
 	return experiment
 }
 
