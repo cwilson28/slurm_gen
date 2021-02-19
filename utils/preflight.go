@@ -8,6 +8,9 @@ import (
 	"commander/datamodels"
 )
 
+/* -----------------------------------------------------------------------------
+ * Main preflight test routine.
+ * -------------------------------------------------------------------------- */
 func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error {
 	var err error
 	var msgBuffer = make([]string, 0)
@@ -59,6 +62,13 @@ func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error 
 	return nil
 }
 
+/* -----------------------------------------------------------------------------
+ * Local test helpers.
+ * -------------------------------------------------------------------------- */
+
+/* ---
+ * Test for the existence of the sample file directory
+ * --- */
 func testSampleDirectory(experiment datamodels.Experiment) error {
 	_, err := os.Stat(experiment.DumpSamplePath())
 	if err != nil && os.IsNotExist(err) {
@@ -74,6 +84,9 @@ func testSampleDirectory(experiment datamodels.Experiment) error {
 	return nil
 }
 
+/* ---
+ * Test for the existence of the individual sample files.
+ * --- */
 func testSampleFiles(experiment datamodels.Experiment) error {
 	var err error
 	var readfile string
@@ -116,6 +129,10 @@ func testSampleFiles(experiment datamodels.Experiment) error {
 	return err
 }
 
+/* ---
+ * Check for the existence of the analysis directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>
+ * --- */
 func testAnalysisDirectory(experiment datamodels.Experiment) error {
 	_, err := os.Stat(experiment.DumpAnalysisPath())
 	if err != nil && os.IsNotExist(err) {
@@ -129,10 +146,13 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
 		}
 		fmt.Println("Done\n")
 	}
-	// If the directory exists, check permissions.
-	return nil
+	// If the directory exists, check permissions.return nil
 }
 
+/* ---
+ * Check for the existence of the tool output directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<tool_name>
+ * --- */
 func testToolOutputDirectory(experiment datamodels.Experiment, tool string) error {
 	msgBuffer := newMsgBuffer()
 
@@ -183,6 +203,10 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 	return err
 }
 
+/* ---
+ * Check the existence of the sample output directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<tool_name>/<sample_prefix>
+ * --- */
 func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool string) error {
 	msgBuffer := newMsgBuffer()
 
@@ -234,6 +258,10 @@ func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool st
 	return err
 }
 
+/* ---
+ * Create a test file in an output path.
+ * This is used to test permissions on an output directory.
+ * --- */
 func createTestFile(path string) error {
 	testfile := fmt.Sprintf("%s/test.txt", path)
 	// Use os.Create to create a file for writing.
