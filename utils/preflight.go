@@ -3,7 +3,9 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"commander/datamodels"
 )
@@ -77,6 +79,79 @@ func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error 
 /* -----------------------------------------------------------------------------
  * Preflight configuration preservation.
  * -------------------------------------------------------------------------- */
+func ArchiveParamFile(paramFile string, experiment datamodels.Experiment) (int64, error) {
+	var paramFileName string
+	var msgBuffer = newMsgBuffer()
+
+	msgBuffer = append(msgBuffer, "Archiving parameter file... ")
+	// Get paramfile name.
+	if strings.Contains(paramFile, "/") {
+		chunks := strings.Split(paramFile, "/")
+		paramFileName = chunks[len(chunks)-1]
+	} else {
+		paramFileName = paramFile
+	}
+
+	// Create the param file destination!
+	paramDstPath := fmt.Sprintf("%s/config/%s", experiment.DumpAnalysisPath(), paramFileName)
+
+	paramFileSrc, err := os.Open(paramFile)
+	if err != nil {
+		return 0, err
+	}
+	defer paramFileSrc.Close()
+
+	paramFileDst, err := os.Create(paramDstPath)
+	if err != nil {
+		return 0, err
+	}
+	defer paramFileDst.Close()
+
+	nBytes, err := io.Copy(paramFileDst, paramFileSrc)
+	if err != nil {
+		return 0, err
+	}
+	msgBuffer = append(msgBuffer, "Done\n")
+	printMsgBuffer(msgBuffer)
+	return nBytes, nil
+}
+
+func ArchiveDesignFile(designFile string, experiment datamodels.Experiment) (int64, error) {
+	var designFileName string
+	var msgBuffer = newMsgBuffer()
+
+	msgBuffer = append(msgBuffer, "Archiving design file... ")
+	// Get the designfile name.
+	if strings.Contains(designFile, "/") {
+		chunks := strings.Split(designFile, "/")
+		designFileName = chunks[len(chunks)-1]
+	} else {
+		designFileName = designFile
+	}
+
+	// Create the param file destination!
+	designDstPath := fmt.Sprintf("%s/config/%s", experiment.DumpAnalysisPath(), designFileName)
+
+	designFileSrc, err := os.Open(designFile)
+	if err != nil {
+		return 0, err
+	}
+	defer designFileSrc.Close()
+
+	designFileDst, err := os.Create(designDstPath)
+	if err != nil {
+		return 0, err
+	}
+	defer designFileDst.Close()
+
+	nBytes, err := io.Copy(designFileDst, designFileSrc)
+	if err != nil {
+		return 0, err
+	}
+	msgBuffer = append(msgBuffer, "Done\n")
+	printMsgBuffer(msgBuffer)
+	return nBytes, nil
+}
 
 /* -----------------------------------------------------------------------------
  * Local test helpers.
