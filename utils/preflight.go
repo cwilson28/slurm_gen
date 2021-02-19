@@ -42,9 +42,18 @@ func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error 
 	// Test tool directories
 	fmt.Println("Checking the existence of pipeline output directories...\n")
 	for _, cmd := range job.Commands {
-		err = testOutputDirectory(experiment, cmd.CommandParams.Command)
+		// Check for the existence of the tool output directory
+		err = testToolOutputDirectory(experiment, cmd.CommandParams.Command)
 		if err != nil {
 			return err
+		}
+
+		// Check for the existence of each sample directory
+		for _, sample := range experiment.Samples {
+			err = testSampleOutputDirectory(experiment, sample.Prefix, cmd.CommandParams.Command)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -129,7 +138,7 @@ func createAnalysisDirectory(experiment datamodels.Experiment) error {
 	return err
 }
 
-func testOutputDirectory(experiment datamodels.Experiment, tool string) error {
+func testToolOutputDirectory(experiment datamodels.Experiment, tool string) error {
 	msgBuffer := newMsgBuffer()
 
 	path := fmt.Sprintf("%s/%s", experiment.DumpAnalysisPath(), tool)
@@ -169,6 +178,57 @@ func testOutputDirectory(experiment datamodels.Experiment, tool string) error {
 	if err != nil {
 		msgBuffer = append(msgBuffer, "\n")
 		msgBuffer = append(msgBuffer, fmt.Sprintf("Output directory is not writeable. Permissions are %s\n", dirInfo.Mode().Perm()))
+		// Trigger an error.
+		errString := fmt.Sprintf("Permission error. Please check that you have correct privleges on %s.", path)
+		err = errors.New(errString)
+	} else {
+		msgBuffer = append(msgBuffer, "Done.\n")
+	}
+	msgBuffer = printMsgBuffer(msgBuffer)
+	return err
+}
+
+func testSampleOutputDirectory(experiment datamodels.Experiment, sample, tool string) error {
+	msgBuffer := newMsgBuffer()
+
+	path := fmt.Sprintf("%s/%s/%s", experiment.DumpAnalysisPath(), tool, sample)
+	dirInfo, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		// The directory does not exist. Try to create it on user's behalf.
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Sample output directory %s does not exist.\n", path))
+		msgBuffer = append(msgBuffer, "Creating directory... ")
+		err = createAnalysisDirectory(experiment)
+		if err != nil {
+			return err
+		}
+		msgBuffer = append(msgBuffer, "Done.\n")
+		msgBuffer = printMsgBuffer(msgBuffer)
+		return nil
+
+	} else if err != nil {
+		// Something went really wrong.
+		return err
+	}
+
+	// Check that path is to a directory
+	if dirInfo.IsDir() {
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Path to sample output directory %s exists.\n", path))
+	} else {
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Path to sample output directory %s exists but is not a directory.\n", path))
+		errString := fmt.Sprintf("Directory error. Please verify the path to output directory %s.", path)
+		err = errors.New(errString)
+	}
+	msgBuffer = printMsgBuffer(msgBuffer)
+	if err != nil {
+		return err
+	}
+
+	// Path is a directory, test write permissions
+	msgBuffer = append(msgBuffer, "Testing sample output directory write permissions... ")
+	err = createTestFile(path)
+	if err != nil {
+		msgBuffer = append(msgBuffer, "\n")
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Sample output directory is not writeable. Permissions are %s\n", dirInfo.Mode().Perm()))
 		// Trigger an error.
 		errString := fmt.Sprintf("Permission error. Please check that you have correct privleges on %s.", path)
 		err = errors.New(errString)
