@@ -100,11 +100,6 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	// Write the slurm preamble for the parent slurm script
 	writeSGEJobPreamble(sgeFile, job.SGEPreamble)
 
-	/* ---
-	 * All slurm preamble is written at this point. All that remains is to write
-	 * command specific jargon.
-	 * --- */
-
 	// If there are multiple commands, it is safe to assume we are generating
 	// a slurm script for a pipeline. Write the command details in a pipeline
 	// format.
