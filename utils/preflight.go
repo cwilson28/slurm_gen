@@ -66,7 +66,7 @@ func testSampleDirectory(experiment datamodels.Experiment) error {
 	if err != nil && os.IsNotExist(err) {
 		// Format custom message for user.
 		errString := fmt.Sprintf(
-			"Directory %s does not exist. \nPlease check that you have specified the sample path correctly.",
+			"Sample directory %s does not exist. \nPlease check that you have specified the sample path correctly.",
 			experiment.DumpSamplePath(),
 		)
 		return errors.New(errString)
