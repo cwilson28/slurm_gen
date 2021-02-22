@@ -38,10 +38,10 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	// Write intermediary job shit.
 	writeIntermediateJobShit(slurmFile)
 
-	/* -----------------
+	/* ---
 	 * All slurm preamble is written at this point. All that remains is to write
 	 * command specific jargon.
-	 * -------------- */
+	 * --- */
 
 	// If there are multiple commands, it is safe to assume we are generating
 	// a slurm script for a pipeline. Write the command details in a pipeline
@@ -100,10 +100,10 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	// Write the slurm preamble for the parent slurm script
 	writeSGEJobPreamble(sgeFile, job.SGEPreamble)
 
-	/* -----------------
+	/* ---
 	 * All slurm preamble is written at this point. All that remains is to write
 	 * command specific jargon.
-	 * -------------- */
+	 * --- */
 
 	// If there are multiple commands, it is safe to assume we are generating
 	// a slurm script for a pipeline. Write the command details in a pipeline
@@ -261,7 +261,6 @@ func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodel
 	fmt.Println("Command is a batch command.")
 	fmt.Println("Writing batch bash scripts...")
 	for _, sample := range experiment.Samples {
-		sample.SamplePath = fmt.Sprintf("%s/%s/%s/%s", experiment.DumpSamplePath(), experiment.PI, experiment.Name, experiment.AnalysisID)
 
 		// Write the command details to a bash script.
 		bashScriptName, err := writeCommandScriptForSample(cmd, sample)
@@ -353,7 +352,7 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 	for _, opt := range command.CommandParams.CommandOptions {
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--outFileNamePrefix" {
-			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
+			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/star/%s_", sample.OutputPath, sample.Prefix))
 		} else if chunks[0] == "--readFilesIn" {
 			opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
 		}
@@ -369,7 +368,7 @@ func writeTrimGaloreCommandOptions(outfile *os.File, command datamodels.Command,
 	for _, opt := range command.CommandParams.CommandOptions {
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--output_dir" {
-			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s", sample.OutputPath))
+			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/trim_galore", sample.OutputPath))
 		}
 		writeCommandOption(outfile, opt)
 	}
@@ -427,7 +426,7 @@ func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample dat
 	writeCommandArgs(outfile, command.CommandParams.CommandArgs)
 
 	// Write the samplename arg
-	sampleNameArg := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
+	sampleNameArg := fmt.Sprintf("%s/rsem-calculate-expression/%s", sample.OutputPath, sample.Prefix)
 	writeCommandArg(outfile, sampleNameArg)
 }
 

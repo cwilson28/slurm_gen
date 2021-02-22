@@ -108,6 +108,13 @@ func (e *Experiment) DumpAnalysisPath() string {
 	return fmt.Sprintf("%s/%s/%s/%s", e.AnalysisPath, e.PI, e.Name, e.AnalysisID)
 }
 
+func (e *Experiment) InitializePaths() {
+	for i, _ := range e.Samples {
+		e.Samples[i].SamplePath = e.DumpSamplePath()
+		e.Samples[i].OutputPath = e.DumpAnalysisPath()
+	}
+}
+
 func (j *Job) MaxCPUUsage() int64 {
 	var maxCPU = int64(0)
 

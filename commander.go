@@ -117,6 +117,8 @@ func main() {
 
 	// Parse the design file.
 	experiment := utils.ParseDesignFile(designFile)
+	// Initialize all sample and output paths for the samples.
+	experiment.InitializePaths()
 
 	// Perform preflight experiment path checks.
 	if preflight {

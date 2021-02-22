@@ -45,6 +45,8 @@ func ParseDesignFile(filename string) datamodels.Experiment {
 			experiment.PI = chunks[1]
 		} else if chunks[0] == "EXPERIMENT" {
 			experiment.Name = chunks[1]
+		} else if chunks[0] == "ANALYSIS_ID" {
+			experiment.Name = chunks[1]
 		} else if chunks[0] == "SAMPLE" {
 			// We are assuming the files are separated with a space.
 			fileNames := strings.Split(chunks[1], " ")
@@ -58,8 +60,6 @@ func ParseDesignFile(filename string) datamodels.Experiment {
 			if len(fileNames) == 2 {
 				sample.ReverseReadFile = fileNames[1]
 			}
-			sample.SamplePath = experiment.DumpSamplePath()
-			sample.OutputPath = experiment.DumpAnalysisPath()
 			samples = append(samples, sample)
 			sample = datamodels.Sample{}
 		}
