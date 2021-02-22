@@ -261,7 +261,7 @@ func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodel
 	fmt.Println("Command is a batch command.")
 	fmt.Println("Writing batch bash scripts...")
 	for _, sample := range experiment.Samples {
-		sample.SamplePath = fmt.Sprintf("%s/%s/%s/%s/", experiment.DumpSamplePath(), experiment.PI, experiment.Name, experiment.AnalysisID)
+		sample.SamplePath = fmt.Sprintf("%s/%s/%s/%s", experiment.DumpSamplePath(), experiment.PI, experiment.Name, experiment.AnalysisID)
 
 		// Write the command details to a bash script.
 		bashScriptName, err := writeCommandScriptForSample(cmd, sample)
