@@ -87,6 +87,17 @@ var HELP_MSG = `
 	--slurm: Tells commander that the scripts should be written for submission to a Slurm cluster.
 	--sge:   Tells commander that the scripts should be written for submission to a SGE cluster
 
+	--preflight:	Tells commander to run sanity checks before generating pipeline scripts.
+			Preflight checks include the following:
+			- Existence of sample file directory and sample files,
+			- Existence of analysis output directory,
+			- Analysis output directory permissions. 
+	
+			A missing sample file directory or sample file will cause commander to terminate.
+			In the case of a missing output directory, commander will try to create the directory
+			on the user's behalf.
+			** At this time, no consideration is given for overwriting existing output. **
+
 	Arguments:
 	A single parameter file that defines the workflow to be executed.
 	
