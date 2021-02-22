@@ -10,7 +10,7 @@ import (
 /* -----------------------------------------------------------------------------
  * The main function for writing the slurm script and accompanying bash scripts.
  * -------------------------------------------------------------------------- */
-func WriteSlurmJobScript(job datamodels.Job) error {
+func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) error {
 	var err error
 	fmt.Println("Writing slurm script preamble...")
 
@@ -48,7 +48,7 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 	// format.
 	if len(job.Commands) > 1 {
 		fmt.Println("Writing pipeline slurm script...")
-		err = writePipelineSlurmScript(slurmFile, job)
+		err = writePipelineSlurmScript(slurmFile, job, experiment)
 		return err
 	}
 
@@ -62,7 +62,7 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 	// more than once.
 	if cmd.Batch {
 		fmt.Println("Writing command script...")
-		err = writeBatchCommand(slurmFile, cmd, job)
+		err = writeBatchCommand(slurmFile, cmd, job, experiment)
 		return err
 	}
 
@@ -78,7 +78,7 @@ func WriteSlurmJobScript(job datamodels.Job) error {
 /* -----------------------------------------------------------------------------
  * The main function for writing an SGE script.
  * -------------------------------------------------------------------------- */
-func WriteSGEJobScript(job datamodels.Job) error {
+func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) error {
 	var err error
 
 	fmt.Println("Writing sge script preamble...")
@@ -124,7 +124,7 @@ func WriteSGEJobScript(job datamodels.Job) error {
 	// more than once.
 	if cmd.Batch {
 		fmt.Println("Writing command script...")
-		err = writeBatchCommand(sgeFile, cmd, job)
+		err = writeBatchCommand(sgeFile, cmd, job, experiment)
 		return err
 	}
 
@@ -214,13 +214,13 @@ func writeJobCPU(slurmFile *os.File, job datamodels.Job) {
  * Write the remaining contents of a pipeline slurm script. This function will
  * also generate the individual bash scripts for the commands being executed.
  * --- */
-func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
+func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job, experiment datamodels.Experiment) error {
 	fmt.Println("Writing pipeline scripts...")
 	// Write the bash scripts for each command.
 	for _, cmd := range job.Commands {
 		if cmd.Batch {
 			// User has indicated the command will be run in a batch format.
-			err := writeBatchCommand(slurmFile, cmd, job)
+			err := writeBatchCommand(slurmFile, cmd, job, experiment)
 			if err != nil {
 				return err
 			}
@@ -257,12 +257,10 @@ func writePipelineSlurmScript(slurmFile *os.File, job datamodels.Job) error {
 /* ---
  * Finish writing slurm file given a single batch command.
  * --- */
-func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodels.Job) error {
+func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodels.Job, experiment datamodels.Experiment) error {
 	fmt.Println("Command is a batch command.")
 	fmt.Println("Writing batch bash scripts...")
-	// Parse the provided samples file
-	samples := ParseSamplesFile(job.SamplesFile)
-	for _, sample := range samples {
+	for _, sample := range experiment.Samples {
 
 		// Write the command details to a bash script.
 		bashScriptName, err := writeCommandScriptForSample(cmd, sample)
