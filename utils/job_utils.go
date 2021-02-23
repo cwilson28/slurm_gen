@@ -352,10 +352,11 @@ func commandParamsFromJSON(jsonParsed *gabs.Container) (datamodels.CommandParams
 		err = errors.New(`JSON error: Missing parameter "command"`)
 		return params, err
 	}
-	if jsonParsed.Exists("volume") {
-		params.Volume = jsonParsed.Path("volume").Data().(string)
+	if jsonParsed.Exists("volumes") {
+		volumes := jsonParsed.Path("volumes")
+		params.Volume = volumesFromJSON(volumes)
 	} else {
-		err = errors.New(`JSON error: Missing parameter "volume"`)
+		err = errors.New(`JSON error: Missing parameter "volumes"`)
 		return params, err
 	}
 	if jsonParsed.Exists("singularity_path") {
@@ -401,6 +402,21 @@ func commandArgumentsFromJSON(jsonParsed *gabs.Container) []string {
 		arguments = append(arguments, c.Data().(string))
 	}
 	return arguments
+}
+
+func volumesFromJSON(jsonParsed *gabs.Container) string {
+	var volString = ""
+	children := jsonParsed.Children()
+
+	for _, c := range children {
+		hostPath := c.Path("host_path").Data().(string)
+		containerPath := c.Path("container_path").Data().(string)
+		if volString != "" {
+			volString += ","
+		}
+		volString += fmt.Sprintf("%s:%s", hostPath, containerPath)
+	}
+	return volString
 }
 
 /* -----------------------------------------------------------------------------
