@@ -36,6 +36,16 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 		return job, err
 	}
 
+	// Get the jobname from the json file.
+	// TODO: This will get incorporated into a more general parser as the
+	// general details of the parameter file evolve.
+	job.Name, err = jobNameFromJSON(jsonParsed)
+	if err != nil {
+		if err != nil {
+			return job, err
+		}
+	}
+
 	// Extract and set slurm preamble.
 	if Platform == "slurm" {
 		slurmPreamble, err := slurmPreambleFromJSON(jsonParsed)
@@ -192,6 +202,17 @@ func isBatchCommand(jsonParsed *gabs.Container) (bool, error) {
 
 	err = errors.New(`JSON error: Missing parameter "batch"`)
 	return false, err
+}
+
+func jobNameFromJSON(jsonParsed *gabs.Container) (string, error) {
+	var jobName string
+	var err error
+	if jsonParsed.Exists("job_name") {
+		jobName = jsonParsed.Path("job_name").Data().(string)
+	} else {
+		err = errors.New(`JSON error: Missing parameter "job_name"`)
+	}
+	return jobName, err
 }
 
 func samplesFileFromJSON(jsonParsed *gabs.Container) (string, error) {

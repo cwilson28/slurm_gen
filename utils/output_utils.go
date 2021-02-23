@@ -84,8 +84,7 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	fmt.Println("Writing sge script preamble...")
 
 	// Open the parent sge script
-	// filename := fmt.Sprintf("%s.qsub", job.SGEPreamble.JobName)
-	filename := "testfile.qsub"
+	filename := fmt.Sprintf("%s.sh", job.Name)
 	sgeFile, err := os.Create(filename)
 	if err != nil {
 		return err

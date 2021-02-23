@@ -43,6 +43,7 @@ type CommandParams struct {
 }
 
 type Job struct {
+	Name              string
 	SlurmPreamble     SlurmPreamble
 	SGEPreamble       SGEPreamble
 	Commands          []Command
