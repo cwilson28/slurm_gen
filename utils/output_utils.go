@@ -15,7 +15,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	fmt.Println("Writing slurm script preamble...")
 
 	// Open the parent slurm file
-	filename := fmt.Sprintf("%s.slurm", job.SlurmPreamble.JobName)
+	filename := fmt.Sprintf("%s.slurm", job.Name)
 	slurmFile, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	}()
 
 	// Write the slurm preamble for the parent slurm script
-	writeSlurmJobPreamble(slurmFile, job.SlurmPreamble)
+	writeSlurmJobPreamble(slurmFile, job.Name, job.SlurmPreamble)
 
 	// Write the max CPUs for this job. For pipeline jobs, this will be the
 	// max CPUs requested by any single step in the pipeline. For single command
@@ -138,9 +138,9 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 /* ---
  * Write the slurm job preamble to a .slurm file.
  * --- */
-func writeSlurmJobPreamble(slurmFile *os.File, preamble datamodels.SlurmPreamble) {
+func writeSlurmJobPreamble(slurmFile *os.File, jobName string, preamble datamodels.SlurmPreamble) {
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", datamodels.SLURM_PREAMBLE["header"]))
-	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_name"], preamble.JobName)))
+	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_name"], jobName)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["partition"], preamble.Partition)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["notifications"], preamble.NotificationType())))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["email"], preamble.EmailAddress)))

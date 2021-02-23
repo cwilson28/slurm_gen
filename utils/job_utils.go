@@ -228,12 +228,6 @@ func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble
 	var err error
 	var preamble = datamodels.SlurmPreamble{}
 
-	if jsonParsed.Exists("job_name") {
-		preamble.JobName = jsonParsed.Path("job_name").Data().(string)
-	} else {
-		err = errors.New(`JSON error: Missing parameter "job_name"`)
-		return preamble, err
-	}
 	if jsonParsed.Exists("wall_time") {
 		preamble.WallTime = jsonParsed.Path("wall_time").Data().(string)
 	} else {
