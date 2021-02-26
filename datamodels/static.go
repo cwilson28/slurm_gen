@@ -1,5 +1,7 @@
 package datamodels
 
+// TODO: Revise the various preamble. Make sure preamble use is consistent and
+// we are not keeping extraneous content hanging around.
 var SLURM_PREAMBLE = map[string]string{
 	"header":        "#!/bin/bash",
 	"job_name":      "#SBATCH --job-name=%s",
@@ -69,7 +71,7 @@ var INTERMEDIATE_SGE_SHIT = []string{
 
 var JOB_SHIT = map[string]string{
 	"singularity_cmd":  "singularity run \\",
-	"singularity_bind": "--bind %s:/compbio \\",
+	"singularity_bind": "--bind %s\\",
 	"singularity_env":  "%s/%s \\",
 	"command":          "%s \\",
 }
