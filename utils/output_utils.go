@@ -97,7 +97,7 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	}()
 
 	// Write the slurm preamble for the parent slurm script
-	writeSGEJobPreamble(sgeFile, job.SGEPreamble)
+	writeSGESubmitScriptPreamble(sgeFile, job.SGEPreamble)
 
 	// If there are multiple commands, it is safe to assume we are generating
 	// a slurm script for a pipeline. Write the command details in a pipeline
@@ -153,9 +153,9 @@ func writeSlurmJobPreamble(slurmFile *os.File, jobName string, preamble datamode
 }
 
 /* ---
- * Write the sge job preamble to a .qsub file.
+ * Write the sge job preamble to a batch file.
  * --- */
-func writeSGEJobPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
+func writeSGESubmitScriptPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
 	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", datamodels.SGE_PREAMBLE["header"]))
 	/* --- Handle boolean flags in the parameter file. --- */
 	// Use current working directory
@@ -175,6 +175,7 @@ func writeSGEJobPreamble(sgeFile *os.File, preamble datamodels.SGEPreamble) {
 
 	// Write any misc preamble
 	writeMiscPreamble(sgeFile, preamble.MiscPreamble)
+
 }
 
 /* ---
