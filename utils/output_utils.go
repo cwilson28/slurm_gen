@@ -375,10 +375,10 @@ func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sam
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--output-dir" {
 			// Create the sample name directory.
-			basePath := fmt.Sprintf("%s/%s", sample.OutputPath, sample.Prefix)
+			basePath := fmt.Sprintf("%s_quant/%s", command.OutputPathPrefix, sample.Prefix)
 			// os.Mkdir(basePath, 0775)
 			// Format the output option for kallisto quant
-			opt = fmt.Sprintf("%s %s/kallisto_quant", chunks[0], basePath)
+			opt = fmt.Sprintf("%s", basePath)
 		}
 		writeCommandOption(outfile, opt)
 	}
@@ -434,10 +434,10 @@ func writeFastQCArguments(outfile *os.File, sample datamodels.Sample) {
 /* ---
  * Format and write kallisto quant specific arguments.
  * --- */
-func writeKallistoQuantArguments(outfile *os.File, sample datamodels.Sample) {
+func writeKallistoQuantArguments(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
 	noExt := true
-	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
-	reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", command.InputPathPrefix, sample.DumpForwardReadFile(noExt))
+	reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", command.InputPathPrefix, sample.DumpReverseReadFile(noExt))
 	writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
 	writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
 }
@@ -495,7 +495,7 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 		writeFastQCArguments(outfile, sample)
 	} else if command.CommandName() == "kallisto" && command.SubCommandName() == "quant" {
 		// Format and write kallisto quant arguments.
-		writeKallistoQuantArguments(outfile, sample)
+		writeKallistoQuantArguments(outfile, command, sample)
 	} else {
 		// Otherwise, write the arguments as they were provided.
 		writeCommandArgs(outfile, command.CommandParams.CommandArgs)
