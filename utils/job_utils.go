@@ -77,11 +77,15 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	for _, c := range jsonParsed.Path("commands").Children() {
 		// Initialize empty command obj.
 		command := datamodels.Command{}
+
 		// Set batch argument.
 		command.Batch, cmdErr = isBatchCommand(c)
 		if cmdErr != nil {
 			return job, cmdErr
 		}
+
+		// Set input_from argument.
+		command.InputFromStep = inputFromStep(c)
 
 		// Extract and set command preamble.
 		preamble, cmdErr := commandPreambleFromJSON(c)
@@ -158,7 +162,7 @@ func ParsePlainTextParams(filename string) (datamodels.Job, error) {
 
 		if tag == "JOB_NAME" {
 			// Set the command name.
-			command.CommandName = val
+			command.CommandParams.Command = val
 		}
 
 		// Set batch preamble
@@ -212,6 +216,24 @@ func isBatchCommand(jsonParsed *gabs.Container) (bool, error) {
 
 	err = errors.New(`JSON error: Missing parameter "batch"`)
 	return false, err
+}
+
+func commandNameFromJSON(jsonParsed *gabs.Container) (string, error) {
+	var err error
+
+	if jsonParsed.Exists("command") {
+		return jsonParsed.Path("command").Data().(string), nil
+	}
+
+	err = errors.New(`JSON error: Missing parameter "command"`)
+	return "", err
+}
+
+func inputFromStep(jsonParsed *gabs.Container) string {
+	if jsonParsed.Exists("input_from_step") {
+		return jsonParsed.Path("input_from_step").Data().(string)
+	}
+	return ""
 }
 
 func jobDetailsFromJSON(jsonParsed *gabs.Container) (datamodels.JobDetails, error) {

@@ -62,12 +62,12 @@ func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error 
  * Test for the existence of the sample file directory
  * --- */
 func testSampleDirectory(experiment datamodels.Experiment) error {
-	_, err := os.Stat(experiment.DumpSamplePath())
+	_, err := os.Stat(experiment.PrintRawSamplePath())
 	if err != nil && os.IsNotExist(err) {
 		// Format custom message for user.
 		errString := fmt.Sprintf(
 			"Sample directory %s does not exist. \nPlease check that you have specified the sample path correctly.",
-			experiment.DumpSamplePath(),
+			experiment.PrintRawSamplePath(),
 		)
 		return errors.New(errString)
 	} else if err != nil {
@@ -87,7 +87,7 @@ func testSampleFiles(experiment datamodels.Experiment) error {
 	// Test for the existence of each sample file. This test uses absolute paths.
 	for _, s := range experiment.Samples {
 		// First test for the existence of the forward read file.
-		readfile = fmt.Sprintf("%s/%s", experiment.DumpSamplePath(), s.ForwardReadFile)
+		readfile = fmt.Sprintf("%s/%s", experiment.PrintRawSamplePath(), s.ForwardReadFile)
 		_, err := os.Stat(readfile)
 		if err != nil && os.IsNotExist(err) {
 			notfound = append(notfound, readfile)
@@ -97,7 +97,7 @@ func testSampleFiles(experiment datamodels.Experiment) error {
 
 		// If reverse read was specified, test for the existence of that file too.
 		if s.ReverseReadFile != "" {
-			readfile = fmt.Sprintf("%s/%s", experiment.DumpSamplePath(), s.ReverseReadFile)
+			readfile = fmt.Sprintf("%s/%s", experiment.PrintRawSamplePath(), s.ReverseReadFile)
 			_, err := os.Stat(readfile)
 			if err != nil && os.IsNotExist(err) {
 				notfound = append(notfound, readfile)
@@ -126,13 +126,13 @@ func testSampleFiles(experiment datamodels.Experiment) error {
  * This directory follows the convention /compbio/analysis/<PI>/<experiment>
  * --- */
 func testAnalysisDirectory(experiment datamodels.Experiment) error {
-	_, err := os.Stat(experiment.DumpAnalysisPath())
+	_, err := os.Stat(experiment.PrintAnalysisPath())
 	if err != nil && os.IsNotExist(err) {
 		// Notify the user the directory does not exist and that we will create
 		// the directory.
-		fmt.Printf("Directory %s does not exist.\n", experiment.DumpAnalysisPath())
+		fmt.Printf("Directory %s does not exist.\n", experiment.PrintAnalysisPath())
 		fmt.Printf("Creating directory... ")
-		err = os.MkdirAll(experiment.DumpAnalysisPath(), 0755)
+		err = os.MkdirAll(experiment.PrintAnalysisPath(), 0755)
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
 func testToolOutputDirectory(experiment datamodels.Experiment, tool string) error {
 	msgBuffer := newMsgBuffer()
 
-	path := fmt.Sprintf("%s/%s", experiment.DumpAnalysisPath(), tool)
+	path := fmt.Sprintf("%s/%s", experiment.PrintAnalysisPath(), tool)
 	dirInfo, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		// The directory does not exist. Try to create it on user's behalf.

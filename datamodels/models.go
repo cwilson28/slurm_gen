@@ -61,11 +61,13 @@ type JobDetails struct {
 }
 
 type Command struct {
-	Batch         bool
-	SamplesFile   string
-	CommandName   string
-	Preamble      CommandPreamble
-	CommandParams CommandParams
+	Batch            bool
+	SamplesFile      string
+	InputFromStep    string
+	InputPathPrefix  string
+	OutputPathPrefix string
+	Preamble         CommandPreamble
+	CommandParams    CommandParams
 }
 
 type BatchParams struct {
@@ -99,6 +101,24 @@ func (j *Job) IsPipeline() bool {
 	return false
 }
 
+func (j *Job) InitializeCMDIOPaths(e Experiment) {
+	for i := range j.Commands {
+
+		if j.Commands[i].InputFromStep == "" {
+			// Command does not expext input as output from a previous command.
+			// Use raw sample path as input path prefix.
+			j.Commands[i].InputPathPrefix = e.PrintRawSamplePath()
+		} else {
+			// Otherwise, the input is the output of a previous step in the
+			// pipeline. The input path should reflect this
+			j.Commands[i].InputPathPrefix = fmt.Sprintf("%s/%s", e.PrintAnalysisPath(), j.Commands[i].InputFromStep)
+		}
+
+		// The output path prefix should account for the tool name
+		j.Commands[i].OutputPathPrefix = fmt.Sprintf("%s/%s", e.PrintAnalysisPath(), j.Commands[i].CommandName())
+	}
+}
+
 /* --- Class functions --- */
 func NewExperiment() Experiment {
 	return Experiment{
@@ -111,18 +131,17 @@ func (e *Experiment) NewAnalysisID() {
 	e.AnalysisID = "1234567890"
 }
 
-func (e *Experiment) DumpSamplePath() string {
+func (e *Experiment) PrintRawSamplePath() string {
 	return fmt.Sprintf("%s/%s/%s", e.SamplePath, e.PI, e.Name)
 }
 
-func (e *Experiment) DumpAnalysisPath() string {
+func (e *Experiment) PrintAnalysisPath() string {
 	return fmt.Sprintf("%s/%s/%s/%s", e.AnalysisPath, e.PI, e.Name, e.AnalysisID)
 }
 
 func (e *Experiment) InitializePaths() {
 	for i, _ := range e.Samples {
-		e.Samples[i].SamplePath = e.DumpSamplePath()
-		e.Samples[i].OutputPath = e.DumpAnalysisPath()
+		e.Samples[i].SamplePath = e.PrintRawSamplePath()
 	}
 }
 
@@ -135,6 +154,13 @@ func (j *Job) MaxCPUUsage() int64 {
 		}
 	}
 	return maxCPU
+}
+
+func (c *Command) CommandName() string {
+	return c.CommandParams.Command
+}
+func (c *Command) SubCommandName() string {
+	return c.CommandParams.Subcommand
 }
 
 func (p *SlurmPreamble) NotificationType() string {
@@ -175,6 +201,10 @@ func (s *Sample) IsPairedEnd() bool {
 		return false
 	}
 	return true
+}
+
+func (s *Sample) AddToOutputPath(dir string) {
+	s.OutputPath += fmt.Sprintf("/%s", dir)
 }
 
 func (s *Sample) DumpReadFiles() string {

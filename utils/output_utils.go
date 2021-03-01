@@ -255,7 +255,6 @@ func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodel
 	fmt.Println("Command is a batch command.")
 	fmt.Println("Writing batch bash scripts...")
 	for _, sample := range experiment.Samples {
-
 		// Write the command details to a bash script.
 		bashScriptName, err := writeCommandScriptForSample(cmd, sample)
 
@@ -289,7 +288,7 @@ func writeBatchCommand(slurmFile *os.File, cmd datamodels.Command, job datamodel
  * --- */
 func writeCommandScript(command datamodels.Command) (string, error) {
 	// Write a bash script for each sample.
-	scriptName := fmt.Sprintf("%s.sh", command.CommandParams.Command)
+	scriptName := fmt.Sprintf("%s.sh", command.CommandName())
 	outfile, err := os.Create(scriptName)
 	if err != nil {
 		return scriptName, err
@@ -305,10 +304,10 @@ func writeCommandScript(command datamodels.Command) (string, error) {
 	writeSingularityPreamble(outfile, command)
 
 	// Write the command we are calling.
-	if command.CommandParams.Subcommand != "" {
-		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", command.CommandParams.Command, command.CommandParams.Subcommand))))
+	if command.SubCommandName() != "" {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", command.CommandName(), command.SubCommandName()))))
 	} else {
-		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandName())))
 	}
 
 	// Write the command options and command arguments
@@ -362,7 +361,7 @@ func writeTrimGaloreCommandOptions(outfile *os.File, command datamodels.Command,
 	for _, opt := range command.CommandParams.CommandOptions {
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--output_dir" {
-			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/trim_galore", sample.OutputPath))
+			opt = fmt.Sprintf("%s %s", chunks[0], command.OutputPathPrefix)
 		}
 		writeCommandOption(outfile, opt)
 	}
@@ -407,12 +406,12 @@ func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample dat
 	// We want trimmed reads here. So drop the file extention from the readfile name.
 	noExt := true
 	if sample.IsPairedEnd() {
-		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+		forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", command.InputPathPrefix, sample.DumpForwardReadFile(noExt))
 		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
-		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", sample.OutputPath, sample.DumpReverseReadFile(noExt))
+		reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", command.InputPathPrefix, sample.DumpReverseReadFile(noExt))
 		writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
 	} else {
-		forwardReads := fmt.Sprintf("%s/%s_trimmed.fq.gz", sample.OutputPath, sample.DumpForwardReadFile(noExt))
+		forwardReads := fmt.Sprintf("%s/%s_trimmed.fq.gz", command.InputPathPrefix, sample.DumpForwardReadFile(noExt))
 		writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
 	}
 
@@ -420,7 +419,7 @@ func writeRSEMArguments(outfile *os.File, command datamodels.Command, sample dat
 	writeCommandArgs(outfile, command.CommandParams.CommandArgs)
 
 	// Write the samplename arg
-	sampleNameArg := fmt.Sprintf("%s/rsem-calculate-expression/%s", sample.OutputPath, sample.Prefix)
+	sampleNameArg := fmt.Sprintf("%s/%s", command.OutputPathPrefix, sample.Prefix)
 	writeCommandArg(outfile, sampleNameArg)
 }
 
@@ -447,7 +446,7 @@ func writeKallistoQuantArguments(outfile *os.File, sample datamodels.Sample) {
  * Write a command script for a given command given a particular sample.
  *  --- */
 func writeCommandScriptForSample(command datamodels.Command, sample datamodels.Sample) (string, error) {
-	outfileName := fmt.Sprintf("%s_%s.sh", command.CommandParams.Command, sample.Prefix)
+	outfileName := fmt.Sprintf("%s_%s.sh", command.CommandName(), sample.Prefix)
 	outfile, err := os.Create(outfileName)
 	if err != nil {
 		return outfileName, err
@@ -463,20 +462,20 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	writeSingularityPreamble(outfile, command)
 
 	// Write the command we are calling. If there is a subcommand (e.g., kallisto "quant") include it!
-	if command.CommandParams.Subcommand != "" {
-		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", command.CommandParams.Command, command.CommandParams.Subcommand))))
+	if command.SubCommandName() != "" {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", command.CommandName(), command.SubCommandName()))))
 	} else {
-		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandParams.Command)))
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], command.CommandName())))
 	}
 
 	// Write command options.
-	if command.CommandParams.Command == "STAR" {
+	if command.CommandName() == "STAR" {
 		// Format and write star specific options
 		writeStarCommandOptions(outfile, command, sample)
-	} else if command.CommandParams.Command == "trim_galore" {
+	} else if command.CommandName() == "trim_galore" {
 		// Format and write trim_galore specific options
 		writeTrimGaloreCommandOptions(outfile, command, sample)
-	} else if command.CommandParams.Command == "kallisto" && command.CommandParams.Subcommand == "quant" {
+	} else if command.CommandName() == "kallisto" && command.SubCommandName() == "quant" {
 		// Format and write kallisto quant specific options
 		writeKallistoQuantOptions(outfile, command, sample)
 	} else {
@@ -485,16 +484,16 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	}
 
 	// Write command args.
-	if command.CommandParams.Command == "trim_galore" {
+	if command.CommandName() == "trim_galore" {
 		// Format and write trim_galore arguments.
 		writeTrimGaloreArguments(outfile, sample)
-	} else if command.CommandParams.Command == "rsem-calculate-expression" {
+	} else if command.CommandName() == "rsem-calculate-expression" {
 		// Format and write rsem arguments.
 		writeRSEMArguments(outfile, command, sample)
-	} else if command.CommandParams.Command == "fastqc" {
+	} else if command.CommandName() == "fastqc" {
 		// Format and write fastqc arguments.
 		writeFastQCArguments(outfile, sample)
-	} else if command.CommandParams.Command == "kallisto" && command.CommandParams.Subcommand == "quant" {
+	} else if command.CommandName() == "kallisto" && command.SubCommandName() == "quant" {
 		// Format and write kallisto quant arguments.
 		writeKallistoQuantArguments(outfile, sample)
 	} else {
