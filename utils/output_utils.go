@@ -15,7 +15,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	fmt.Println("Writing slurm script preamble...")
 
 	// Open the parent slurm file
-	filename := fmt.Sprintf("%s.slurm", job.Name)
+	filename := fmt.Sprintf("%s.slurm", job.Details.Name)
 	slurmFile, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -28,7 +28,10 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	}()
 
 	// Write the slurm preamble for the parent slurm script
-	writeSlurmJobPreamble(slurmFile, job.Name, job.SlurmPreamble)
+	writeSlurmJobPreamble(slurmFile, job.Details.Name, job.SlurmPreamble)
+
+	// Write any miscellaneous preamble.
+	writeMiscPreamble(slurmFile, job.MiscPreamble)
 
 	// Write the max CPUs for this job. For pipeline jobs, this will be the
 	// max CPUs requested by any single step in the pipeline. For single command
@@ -84,7 +87,7 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	fmt.Println("Writing sge script preamble...")
 
 	// Open the parent sge script
-	filename := fmt.Sprintf("%s.sh", job.Name)
+	filename := fmt.Sprintf("%s.sh", job.Details.Name)
 	sgeFile, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -98,6 +101,9 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 
 	// Write the slurm preamble for the parent slurm script
 	writeSGESubmitScriptPreamble(sgeFile, job.SGEPreamble)
+
+	// Write any miscellaneous preamble.
+	writeMiscPreamble(sgeFile, job.MiscPreamble)
 
 	// If there are multiple commands, it is safe to assume we are generating
 	// a slurm script for a pipeline. Write the command details in a pipeline
@@ -147,9 +153,6 @@ func writeSlurmJobPreamble(slurmFile *os.File, jobName string, preamble datamode
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["time"], preamble.WallTime)))
 	fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SLURM_PREAMBLE["job_log"], preamble.JobName)))
 	fmt.Fprintln(slurmFile)
-
-	// Write any misc preamble
-	writeMiscPreamble(slurmFile, preamble.MiscPreamble)
 }
 
 /* ---
@@ -172,20 +175,16 @@ func writeSGESubmitScriptPreamble(sgeFile *os.File, preamble datamodels.SGEPream
 	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SGE_PREAMBLE["parallel_environment"], preamble.ParallelEnv)))
 	fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.SGE_PREAMBLE["memory"], preamble.Memory)))
 	fmt.Fprintln(sgeFile)
-
-	// Write any misc preamble
-	writeMiscPreamble(sgeFile, preamble.MiscPreamble)
-
 }
 
 /* ---
  * Write misc preamble
  * --- */
-func writeMiscPreamble(sgeFile *os.File, preamble []string) {
-	for _, line := range preamble {
-		fmt.Fprintln(sgeFile, fmt.Sprintf(line))
+func writeMiscPreamble(outfile *os.File, preamble datamodels.MiscPreamble) {
+	for _, line := range preamble.Lines {
+		fmt.Fprintln(outfile, fmt.Sprintf(line))
 	}
-	fmt.Fprintln(sgeFile)
+	fmt.Fprintln(outfile)
 }
 
 /* ---
@@ -460,7 +459,7 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	// Write the header lines to the bash script.
 	writeBashScriptHeader(outfile)
 
-	// Write the singuarity command preamble.
+	// Write the singularity command preamble.
 	writeSingularityPreamble(outfile, command)
 
 	// Write the command we are calling. If there is a subcommand (e.g., kallisto "quant") include it!
@@ -538,8 +537,8 @@ func writeCommandOption(outfile *os.File, option string) {
  * --- */
 func writeCommandArgs(outfile *os.File, args []string) {
 	// Write all command options.
-	for _, opt := range args {
-		fmt.Fprintln(outfile, fmt.Sprintf("%s \\", opt))
+	for _, arg := range args {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s \\", arg))
 	}
 }
 

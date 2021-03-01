@@ -36,30 +36,40 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 		return job, err
 	}
 
-	// Get the jobname from the json file.
-	// TODO: This will get incorporated into a more general parser as the
-	// general details of the parameter file evolve.
-	job.Name, err = jobNameFromJSON(jsonParsed)
+	// Get the job details from the json file.
+	details, err := jobDetailsFromJSON(jsonParsed.Path("job_details"))
 	if err != nil {
 		if err != nil {
 			return job, err
 		}
 	}
 
-	// Extract and set slurm preamble.
+	job.Details = details
+
+	// Extract and set any platform specific preamble.
 	if Platform == "slurm" {
-		slurmPreamble, err := slurmPreambleFromJSON(jsonParsed)
+		slurmPreamble, err := slurmPreambleFromJSON(jsonParsed.Path("slurm_preamble"))
 		if err != nil {
 			return job, err
 		}
 		job.SlurmPreamble = slurmPreamble
 	} else if Platform == "sge" {
-		sgePreamble, err := sgePreambleFromJSON(jsonParsed)
+		sgePreamble, err := sgePreambleFromJSON(jsonParsed.Path("sge_preamble"))
 		if err != nil {
 			return job, err
 		}
 		job.SGEPreamble = sgePreamble
 	}
+
+	// Extract and set any miscellaneous preamble.
+	miscPreamble, err := miscPreambleFromJSON(jsonParsed)
+	if err != nil {
+		if err != nil {
+			return job, err
+		}
+	}
+
+	job.MiscPreamble = miscPreamble
 
 	// Extract the commands from the params file.
 	var cmdErr error
@@ -204,24 +214,24 @@ func isBatchCommand(jsonParsed *gabs.Container) (bool, error) {
 	return false, err
 }
 
-func jobNameFromJSON(jsonParsed *gabs.Container) (string, error) {
-	var jobName string
+func jobDetailsFromJSON(jsonParsed *gabs.Container) (datamodels.JobDetails, error) {
+	var details datamodels.JobDetails
 	var err error
+
 	if jsonParsed.Exists("job_name") {
-		jobName = jsonParsed.Path("job_name").Data().(string)
+		details.Name = jsonParsed.Path("job_name").Data().(string)
 	} else {
 		err = errors.New(`JSON error: Missing parameter "job_name"`)
+		return details, err
 	}
-	return jobName, err
-}
-
-func samplesFileFromJSON(jsonParsed *gabs.Container) (string, error) {
-	if jsonParsed.Exists("samples_file") {
-		return jsonParsed.Path("samples_file").Data().(string), nil
+	if jsonParsed.Exists("design_file") {
+		details.DesignFile = jsonParsed.Path("design_file").Data().(string)
+	} else {
+		err := errors.New(`JSON error: Missing parameter "design_file"`)
+		return details, err
 	}
 
-	err := errors.New(`JSON error: Missing parameter "samples_file"`)
-	return "", err
+	return details, err
 }
 
 func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble, error) {
@@ -306,14 +316,21 @@ func sgePreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SGEPreamble, er
 		err = errors.New(`JSON error: Missing parameter "memory"`)
 		return preamble, err
 	}
-	if jsonParsed.Exists("misc_preamble") {
-		preamble.MiscPreamble = miscPreamble(jsonParsed)
-	} else {
-		err = errors.New(`JSON error: Missing parameter "memory"`)
-		return preamble, err
-	}
 
 	return preamble, nil
+}
+
+func miscPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.MiscPreamble, error) {
+	var miscPreamble datamodels.MiscPreamble
+	var lines = make([]string, 0)
+
+	children := jsonParsed.Path("misc_preamble").Children()
+	for _, child := range children {
+		lines = append(lines, child.Data().(string))
+	}
+
+	miscPreamble.Lines = lines
+	return miscPreamble, nil
 }
 
 func commandPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.CommandPreamble, error) {
@@ -475,13 +492,4 @@ func setBatchPreamble(tag, val string, cmd *datamodels.Command) {
 	} else if tag == "SAMPLES_FILE" {
 		cmd.SamplesFile = val
 	}
-}
-
-func miscPreamble(container *gabs.Container) []string {
-	var lines = make([]string, 0)
-	children := container.Path("misc_preamble").Children()
-	for _, child := range children {
-		lines = append(lines, child.Data().(string))
-	}
-	return lines
 }

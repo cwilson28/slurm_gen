@@ -25,6 +25,10 @@ type SGEPreamble struct {
 	MiscPreamble []string
 }
 
+type MiscPreamble struct {
+	Lines []string
+}
+
 type CommandPreamble struct {
 	Tasks  int64
 	CPUs   int64
@@ -43,12 +47,17 @@ type CommandParams struct {
 }
 
 type Job struct {
-	Name              string
+	Details           JobDetails
+	ExperimentDetails Experiment
 	SlurmPreamble     SlurmPreamble
 	SGEPreamble       SGEPreamble
+	MiscPreamble      MiscPreamble
 	Commands          []Command
-	ExperimentDetails Experiment
-	SamplesFile       string
+}
+
+type JobDetails struct {
+	Name       string
+	DesignFile string
 }
 
 type Command struct {
@@ -71,6 +80,7 @@ type Experiment struct {
 	AnalysisID   string
 	SamplePath   string
 	AnalysisPath string
+	SamplesFile  string
 	Samples      []Sample
 }
 
