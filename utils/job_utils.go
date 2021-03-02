@@ -248,10 +248,11 @@ func jobDetailsFromJSON(jsonParsed *gabs.Container) (datamodels.JobDetails, erro
 	}
 	if jsonParsed.Exists("design_file") {
 		details.DesignFile = jsonParsed.Path("design_file").Data().(string)
-	} else {
-		err := errors.New(`JSON error: Missing parameter "design_file"`)
-		return details, err
 	}
+	// else {
+	// 	err := errors.New(`JSON error: Missing parameter "design_file"`)
+	// 	return details, err
+	// }
 
 	return details, err
 }

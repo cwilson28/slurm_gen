@@ -17,6 +17,7 @@ func ShowHelp() {
 func main() {
 	var err error
 	var job datamodels.Job
+	var experiment datamodels.Experiment
 	var platform string
 	var sge, slurm, submit, preflight bool
 
@@ -82,16 +83,13 @@ func main() {
 	 * flag.Args()
 	 * ---------------------------------------------------------------------- */
 
-	if len(flag.Args()) < 2 {
-		log.Fatal(fmt.Sprintf("Error: Wrong number of args. \nExpecting: commander <path_to_param_file.json> <path_to_design_file.txt>\nReceived: commander %s", flag.Args()[0]))
+	if len(flag.Args()) < 1 {
+		log.Fatal(fmt.Sprintf("Error: Wrong number of args. \nExpecting: commander <path_to_param_file.json> \nReceived: commander %s", flag.Args()[0]))
 		os.Exit(1)
 	}
 
 	// Grab the parameter file from the command line.
 	paramFile := flag.Args()[0]
-
-	// Grab the design file from the command line.
-	designFile := flag.Args()[1]
 
 	/* -------------------------------------------------------------------------
 	 * We are supporting both plain text and json param files.
@@ -115,14 +113,17 @@ func main() {
 		}
 	}
 
-	// Parse the design file.
-	experiment := utils.ParseDesignFile(designFile)
+	// If a design file was supplied, set up the experiment.
+	if job.Details.DesignFile != "" {
+		// Parse the design file.
+		experiment := utils.ParseDesignFile(job.Details.DesignFile)
 
-	// Initialize all input paths for the samples.
-	experiment.InitializePaths()
+		// Initialize all input paths for the samples.
+		experiment.InitializePaths()
 
-	// Initialize all input and output paths for the commands.
-	job.InitializeCMDIOPaths(experiment)
+		// Initialize all input and output paths for the commands.
+		job.InitializeCMDIOPaths(experiment)
+	}
 
 	// Perform preflight experiment path checks.
 	if preflight {
