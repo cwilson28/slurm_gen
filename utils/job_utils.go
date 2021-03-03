@@ -36,14 +36,13 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 		return job, err
 	}
 
-	// Get the job details from the json file.
+	// Extract and set the job details from the json file.
 	details, err := jobDetailsFromJSON(jsonParsed.Path("job_details"))
 	if err != nil {
 		if err != nil {
 			return job, err
 		}
 	}
-
 	job.Details = details
 
 	// Extract and set any platform specific preamble.
@@ -68,7 +67,6 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 			return job, err
 		}
 	}
-
 	job.MiscPreamble = miscPreamble
 
 	// Extract the commands from the params file.
@@ -103,6 +101,11 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 		commands = append(commands, command)
 	}
 	job.Commands = commands
+
+	// Extract any cleanup actions for the job.
+	cleanup := cleanupFromJSON(jsonParsed.Path("cleanup"))
+	job.Cleanup = cleanup
+
 	fmt.Printf("Done.\n")
 	return job, nil
 }
@@ -457,6 +460,17 @@ func volumesFromJSON(jsonParsed *gabs.Container) string {
 		volString += fmt.Sprintf("%s:%s", hostPath, containerPath)
 	}
 	return volString
+}
+
+func cleanupFromJSON(jsonParsed *gabs.Container) []string {
+	var cleanupActions = make([]string, 0)
+
+	children := jsonParsed.Children()
+
+	for _, c := range children {
+		cleanupActions = append(cleanupActions, c.Data().(string))
+	}
+	return cleanupActions
 }
 
 /* -----------------------------------------------------------------------------

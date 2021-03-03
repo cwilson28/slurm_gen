@@ -53,6 +53,7 @@ type Job struct {
 	SGEPreamble       SGEPreamble
 	MiscPreamble      MiscPreamble
 	Commands          []Command
+	CleanupActions    []string
 }
 
 type JobDetails struct {

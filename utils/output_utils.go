@@ -52,6 +52,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	if len(job.Commands) > 1 {
 		fmt.Println("Writing pipeline slurm script...")
 		err = writePipelineSlurmScript(slurmFile, job, experiment)
+		writeCleanupActions(slurmFile, job.CleanupActions)
 		return err
 	}
 
@@ -75,6 +76,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	writeSlurmCommandPreamble(slurmFile, cmd.Preamble)
 	writeCommandOptions(slurmFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(slurmFile, cmd.CommandParams.CommandArgs)
+	writeCleanupActions(slurmFile, job.CleanupActions)
 	return nil
 }
 
@@ -132,8 +134,16 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	// The command is not a batch command, write the command to the slurm file
 	// we opened earlier.
 	writeSingularityPreamble(sgeFile, cmd)
+
+	// Write the command we are calling.
+	if cmd.SubCommandName() != "" {
+		fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", cmd.CommandName(), cmd.SubCommandName()))))
+	} else {
+		fmt.Fprintln(sgeFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], cmd.CommandName())))
+	}
 	writeCommandOptions(sgeFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(sgeFile, cmd.CommandParams.CommandArgs)
+	writeCleanupActions(sgeFile, job.CleanupActions)
 	return nil
 }
 
@@ -555,4 +565,13 @@ func writeCommandArg(outfile *os.File, arg string) {
 func writeWait(outfile *os.File) {
 	// Write a single command arg.
 	fmt.Fprintln(outfile, "wait")
+}
+
+/* ---
+ * Write any cleanup actions to the job script.
+ * --- */
+func writeCleanupActions(outfile *os.File, actions []string) {
+	for _, a := range actions {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", a))
+	}
 }

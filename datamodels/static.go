@@ -71,7 +71,7 @@ var INTERMEDIATE_SGE_SHIT = []string{
 
 var JOB_SHIT = map[string]string{
 	"singularity_cmd":  "singularity run \\",
-	"singularity_bind": "--bind %s\\",
+	"singularity_bind": "--bind %s \\",
 	"singularity_env":  "%s/%s \\",
 	"command":          "%s \\",
 }
