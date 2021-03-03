@@ -103,8 +103,8 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	job.Commands = commands
 
 	// Extract any cleanup actions for the job.
-	cleanup := cleanupFromJSON(jsonParsed.Path("cleanup"))
-	job.Cleanup = cleanup
+	cleanup := cleanupFromJSON(jsonParsed)
+	job.CleanupActions = cleanup
 
 	fmt.Printf("Done.\n")
 	return job, nil
@@ -465,10 +465,12 @@ func volumesFromJSON(jsonParsed *gabs.Container) string {
 func cleanupFromJSON(jsonParsed *gabs.Container) []string {
 	var cleanupActions = make([]string, 0)
 
-	children := jsonParsed.Children()
+	if jsonParsed.Exists("cleanup") {
+		children := jsonParsed.Path("cleanup").Children()
 
-	for _, c := range children {
-		cleanupActions = append(cleanupActions, c.Data().(string))
+		for _, c := range children {
+			cleanupActions = append(cleanupActions, c.Data().(string))
+		}
 	}
 	return cleanupActions
 }
