@@ -37,13 +37,22 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	}
 
 	// Extract and set the job details from the json file.
-	details, err := jobDetailsFromJSON(jsonParsed.Path("job_details"))
+	details, err := jobDetailsFromJSON(jsonParsed)
 	if err != nil {
 		if err != nil {
 			return job, err
 		}
 	}
 	job.Details = details
+
+	// Extract and set experiment details from the json file.
+	expDetails, err := experimentDetailsFromJSON(jsonParsed)
+	if err != nil {
+		if err != nil {
+			return job, err
+		}
+	}
+	job.ExperimentDetails = expDetails
 
 	// Extract and set any platform specific preamble.
 	if Platform == "slurm" {
@@ -243,21 +252,19 @@ func jobDetailsFromJSON(jsonParsed *gabs.Container) (datamodels.JobDetails, erro
 	var details datamodels.JobDetails
 	var err error
 
-	if jsonParsed.Exists("job_name") {
-		details.Name = jsonParsed.Path("job_name").Data().(string)
-	} else {
-		err = errors.New(`JSON error: Missing parameter "job_name"`)
-		return details, err
+	if jsonParsed.Exists("job_details") {
+		detailsJSON := jsonParsed.Path("job_details")
+		if detailsJSON.Exists("job_name") {
+			details.Name = detailsJSON.Path("job_name").Data().(string)
+		} else {
+			err = errors.New(`JSON error: Missing parameter "job_name"`)
+			return details, err
+		}
+		if detailsJSON.Exists("design_file") {
+			details.DesignFile = detailsJSON.Path("design_file").Data().(string)
+		}
 	}
-	if jsonParsed.Exists("design_file") {
-		details.DesignFile = jsonParsed.Path("design_file").Data().(string)
-	}
-	// else {
-	// 	err := errors.New(`JSON error: Missing parameter "design_file"`)
-	// 	return details, err
-	// }
-
-	return details, err
+	return details, nil
 }
 
 func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble, error) {
@@ -300,7 +307,6 @@ func slurmPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SlurmPreamble
 		err = errors.New(`JSON error: Missing parameter "email_address"`)
 		return preamble, err
 	}
-
 	return preamble, nil
 }
 
@@ -344,6 +350,38 @@ func sgePreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SGEPreamble, er
 	}
 
 	return preamble, nil
+}
+
+func experimentDetailsFromJSON(jsonParsed *gabs.Container) (datamodels.Experiment, error) {
+	var experimentDetails = datamodels.Experiment{}
+	var err error
+
+	if jsonParsed.Exists("experiment_details") {
+		experimentJSON := jsonParsed.Path("experiment_details")
+		if experimentJSON.Exists("pi") {
+			experimentDetails.PI = experimentJSON.Path("pi").Data().(string)
+		} else {
+			err = errors.New("JSON error: Experiment block declared but PI argument is missing.")
+			return experimentDetails, err
+		}
+		if experimentJSON.Exists("experiment_name") {
+			experimentDetails.Name = experimentJSON.Path("experiment_name").Data().(string)
+		} else {
+			err = errors.New("JSON error: Experiment block declared but experiment_name argument is missing.")
+			return experimentDetails, err
+		}
+		if experimentJSON.Exists("analysis_id") {
+			experimentDetails.AnalysisID = experimentJSON.Path("analysis_id").Data().(string)
+		} else {
+			err = errors.New("JSON error: Experiment block declared but analysis_id argument is missing.")
+			return experimentDetails, err
+		}
+		if experimentJSON.Exists("samples_file") {
+			experimentDetails.SamplesFile = experimentJSON.Path("samples_file").Data().(string)
+		}
+	}
+	return experimentDetails, nil
+
 }
 
 func miscPreambleFromJSON(jsonParsed *gabs.Container) (datamodels.MiscPreamble, error) {
