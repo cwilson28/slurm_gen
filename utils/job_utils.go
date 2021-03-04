@@ -23,7 +23,7 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	var err error
 	var job datamodels.Job
 
-	fmt.Printf("Parsing JSON parameter file... ")
+	fmt.Printf("Parsing JSON parameter file... \n\n")
 
 	rawJSON, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -37,22 +37,17 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	}
 
 	// Extract and set the job details from the json file.
-	details, err := jobDetailsFromJSON(jsonParsed)
+	jobDetails, err := jobDetailsFromJSON(jsonParsed)
 	if err != nil {
 		if err != nil {
 			return job, err
 		}
 	}
-	job.Details = details
+	job.Details = jobDetails
 
 	// Extract and set experiment details from the json file.
-	expDetails, err := experimentDetailsFromJSON(jsonParsed)
-	if err != nil {
-		if err != nil {
-			return job, err
-		}
-	}
-	job.ExperimentDetails = expDetails
+	// If no experiment block is provided, this will initialize a default experiment.
+	job.ExperimentDetails = experimentDetailsFromJSON(jsonParsed)
 
 	// Extract and set any platform specific preamble.
 	if Platform == "slurm" {
@@ -114,8 +109,6 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	// Extract any cleanup actions for the job.
 	cleanup := cleanupFromJSON(jsonParsed)
 	job.CleanupActions = cleanup
-
-	fmt.Printf("Done.\n")
 	return job, nil
 }
 
@@ -352,35 +345,34 @@ func sgePreambleFromJSON(jsonParsed *gabs.Container) (datamodels.SGEPreamble, er
 	return preamble, nil
 }
 
-func experimentDetailsFromJSON(jsonParsed *gabs.Container) (datamodels.Experiment, error) {
-	var experimentDetails = datamodels.Experiment{}
-	var err error
+func experimentDetailsFromJSON(jsonParsed *gabs.Container) datamodels.Experiment {
+	var experimentDetails = datamodels.DefaultExperiment()
 
 	if jsonParsed.Exists("experiment_details") {
 		experimentJSON := jsonParsed.Path("experiment_details")
 		if experimentJSON.Exists("pi") {
 			experimentDetails.PI = experimentJSON.Path("pi").Data().(string)
-		} else {
-			err = errors.New("JSON error: Experiment block declared but PI argument is missing.")
-			return experimentDetails, err
 		}
 		if experimentJSON.Exists("experiment_name") {
 			experimentDetails.Name = experimentJSON.Path("experiment_name").Data().(string)
-		} else {
-			err = errors.New("JSON error: Experiment block declared but experiment_name argument is missing.")
-			return experimentDetails, err
 		}
 		if experimentJSON.Exists("analysis_id") {
 			experimentDetails.AnalysisID = experimentJSON.Path("analysis_id").Data().(string)
-		} else {
-			err = errors.New("JSON error: Experiment block declared but analysis_id argument is missing.")
-			return experimentDetails, err
 		}
-		if experimentJSON.Exists("samples_file") {
+		if experimentJSON.Exists("sample_path") {
+			experimentDetails.SamplePath = experimentJSON.Path("sample_path").Data().(string)
+		}
+		if experimentJSON.Exists("analysis_path") {
+			experimentDetails.AnalysisPath = experimentJSON.Path("analysis_path").Data().(string)
+		}
+		if experimentJSON.Exists("workdir") && experimentJSON.Path("workdir").Data() != nil {
+			experimentDetails.WorkDir = experimentJSON.Path("workdir").Data().(string)
+		}
+		if experimentJSON.Exists("design_file") {
 			experimentDetails.SamplesFile = experimentJSON.Path("samples_file").Data().(string)
 		}
 	}
-	return experimentDetails, nil
+	return experimentDetails
 
 }
 

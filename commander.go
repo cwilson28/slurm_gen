@@ -113,21 +113,15 @@ func main() {
 		}
 	}
 
-	// If a design file was supplied, set up the experiment.
-	if job.Details.DesignFile != "" {
-		// Parse the design file.
-		experiment := utils.ParseDesignFile(job.Details.DesignFile)
+	// Initialize all input paths for the samples.
+	job.ExperimentDetails.InitializePaths()
 
-		// Initialize all input paths for the samples.
-		experiment.InitializePaths()
-
-		// Initialize all input and output paths for the commands.
-		job.InitializeCMDIOPaths(experiment)
-	}
+	// Initialize all input and output paths for the commands.
+	job.InitializeCMDIOPaths(experiment)
 
 	// Perform preflight experiment path checks.
 	if preflight {
-		err := utils.PreflightTests(experiment, job)
+		err := utils.PreflightTests(job)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -83,6 +83,7 @@ type Experiment struct {
 	AnalysisID   string
 	SamplePath   string
 	AnalysisPath string
+	WorkDir      string
 	SamplesFile  string
 	Samples      []Sample
 }
@@ -121,11 +122,24 @@ func (j *Job) InitializeCMDIOPaths(e Experiment) {
 }
 
 /* --- Class functions --- */
-func NewExperiment() Experiment {
+func DefaultExperiment() Experiment {
+	// Default experiment will initialize a compbio directory in the directory
+	// where it is being run. Alternate paths should be provided in the "experiment"
+	// declaration in the accompanying param file.
 	return Experiment{
-		SamplePath:   "compbio/data",
-		AnalysisPath: "compbio/analysis",
+		PI:           "COMMANDER",
+		Name:         "COMMANDER_TEST",
+		SamplePath:   "./compbio/data",
+		AnalysisPath: "./compbio/analysis",
+		AnalysisID:   "1234567890",
 	}
+}
+
+func (e *Experiment) IsEmpty() bool {
+	if e.PI == "" {
+		return true
+	}
+	return false
 }
 
 func (e *Experiment) NewAnalysisID() {
@@ -138,6 +152,10 @@ func (e *Experiment) PrintRawSamplePath() string {
 
 func (e *Experiment) PrintAnalysisPath() string {
 	return fmt.Sprintf("%s/%s/%s/%s", e.AnalysisPath, e.PI, e.Name, e.AnalysisID)
+}
+
+func (e *Experiment) PrintWorkingDirectory() string {
+	return fmt.Sprintf("%s", e.WorkDir)
 }
 
 func (e *Experiment) InitializePaths() {

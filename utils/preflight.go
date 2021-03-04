@@ -11,42 +11,47 @@ import (
 /* -----------------------------------------------------------------------------
  * Main preflight test routine.
  * -------------------------------------------------------------------------- */
-func PreflightTests(experiment datamodels.Experiment, job datamodels.Job) error {
+func PreflightTests(job datamodels.Job) error {
 	var err error
-	var msgBuffer = make([]string, 0)
+	experiment := job.ExperimentDetails
+
 	// Test sample file directory
 	fmt.Println("Performing pipeline preflight checks...\n")
-	msgBuffer = append(msgBuffer, "Checking existence of sample directory... ")
 	err = testSampleDirectory(experiment)
 	if err != nil {
 		return err
 	}
-	msgBuffer = append(msgBuffer, "Done.\n")
-	msgBuffer = printMsgBuffer(msgBuffer)
 
-	// Test sample files
-	msgBuffer = append(msgBuffer, "Checking existence of sample files...")
-	err = testSampleFiles(experiment)
-	if err != nil {
-		return err
+	// Test existence of sample files.
+	if len(experiment.Samples) > 0 {
+		fmt.Println("Checking existence of sample files... \n")
+		err = testSampleFiles(experiment)
+		if err != nil {
+			return err
+		}
 	}
-	msgBuffer = append(msgBuffer, "Done.\n")
-	msgBuffer = printMsgBuffer(msgBuffer)
 
 	// Test analysis directory
-	msgBuffer = append(msgBuffer, "Checking existence of analysis directory... ")
+	fmt.Printf("Checking existence of analysis directory %s... \n\n", experiment.PrintAnalysisPath())
 	err = testAnalysisDirectory(experiment)
 	if err != nil {
 		return err
 	}
-	msgBuffer = append(msgBuffer, "Done.\n")
-	msgBuffer = printMsgBuffer(msgBuffer)
+
+	// Test working directory
+	if experiment.WorkDir != "" {
+		fmt.Printf("Checking existence of working directory %s... \n\n", experiment.PrintAnalysisPath())
+		err = testAnalysisDirectory(experiment)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Test tool directories
 	fmt.Println("Checking the existence of pipeline tool directories...\n")
 	for _, cmd := range job.Commands {
 		// Check for the existence of the tool output directory
-		err = testToolOutputDirectory(experiment, cmd.CommandParams.Command)
+		err := testToolOutputDirectory(experiment, cmd.CommandParams.Command)
 		if err != nil {
 			return err
 		}
@@ -73,6 +78,7 @@ func testSampleDirectory(experiment datamodels.Experiment) error {
 	} else if err != nil {
 		return err
 	}
+	fmt.Printf("Sample directory %s exists.\n\n", experiment.PrintRawSamplePath())
 	return nil
 }
 
@@ -126,17 +132,44 @@ func testSampleFiles(experiment datamodels.Experiment) error {
  * This directory follows the convention /compbio/analysis/<PI>/<experiment>
  * --- */
 func testAnalysisDirectory(experiment datamodels.Experiment) error {
+
 	_, err := os.Stat(experiment.PrintAnalysisPath())
 	if err != nil && os.IsNotExist(err) {
 		// Notify the user the directory does not exist and that we will create
 		// the directory.
 		fmt.Printf("Directory %s does not exist.\n", experiment.PrintAnalysisPath())
-		fmt.Printf("Creating directory... ")
+		fmt.Printf("Creating directory...\n\n")
 		err = os.MkdirAll(experiment.PrintAnalysisPath(), 0755)
 		if err != nil {
 			return err
 		}
-		fmt.Println("Done\n")
+	} else if err != nil {
+		return err
+	} else {
+		fmt.Println("Directory exists.\n")
+	}
+	return nil
+}
+
+/* ---
+ * Check for the existence of the working directory.
+ * This directory does not follow a specific convention.
+ * --- */
+func testWorkingDirectory(experiment datamodels.Experiment) error {
+	_, err := os.Stat(experiment.PrintWorkingDirectory())
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		fmt.Printf("Directory %s does not exist.\n", experiment.PrintWorkingDirectory())
+		fmt.Printf("Creating directory...\n\n")
+		err = os.MkdirAll(experiment.PrintWorkingDirectory(), 0755)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		fmt.Println("Directory exists.\n")
 	}
 	return nil
 }
@@ -146,53 +179,40 @@ func testAnalysisDirectory(experiment datamodels.Experiment) error {
  * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<tool_name>
  * --- */
 func testToolOutputDirectory(experiment datamodels.Experiment, tool string) error {
-	msgBuffer := newMsgBuffer()
 
 	path := fmt.Sprintf("%s/%s", experiment.PrintAnalysisPath(), tool)
 	dirInfo, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		// The directory does not exist. Try to create it on user's behalf.
-		msgBuffer = append(msgBuffer, fmt.Sprintf("Output directory %s does not exist.\n", path))
-		msgBuffer = append(msgBuffer, "Creating directory... ")
+		fmt.Printf("Directory %s does not exist.\n", path)
+		fmt.Printf("Creating directory...\n\n")
 		err = os.MkdirAll(path, 0755)
 		if err != nil {
 			return err
 		}
-		msgBuffer = append(msgBuffer, "Done.\n")
-		msgBuffer = printMsgBuffer(msgBuffer)
 		return nil
-
 	} else if err != nil {
 		// Something went really wrong.
 		return err
 	}
 
 	// Check that path is to a directory
-	if dirInfo.IsDir() {
-		msgBuffer = append(msgBuffer, fmt.Sprintf("Path to output directory %s exists.\n", path))
-	} else {
-		msgBuffer = append(msgBuffer, fmt.Sprintf("Path to output directory %s exists but is not a directory.\n", path))
+	if !dirInfo.IsDir() {
+		fmt.Printf("Path to output directory %s exists but is not a directory.\n", path)
 		errString := fmt.Sprintf("Directory error. Please verify the path to output directory %s.", path)
 		err = errors.New(errString)
-	}
-	msgBuffer = printMsgBuffer(msgBuffer)
-	if err != nil {
 		return err
 	}
 
 	// Path is a directory, test write permissions
-	msgBuffer = append(msgBuffer, "Testing output directory write permissions... ")
+	fmt.Printf("Testing write permissions on directory %s\n", path)
 	err = createTestFile(path)
 	if err != nil {
-		msgBuffer = append(msgBuffer, "\n")
-		msgBuffer = append(msgBuffer, fmt.Sprintf("Output directory is not writeable. Permissions are %s\n", dirInfo.Mode().Perm()))
+		fmt.Printf("Directory is not writeable. Permissions are %s\n", dirInfo.Mode().Perm())
 		// Trigger an error.
 		errString := fmt.Sprintf("Permission error. Please check that you have correct privleges on %s.", path)
 		err = errors.New(errString)
-	} else {
-		msgBuffer = append(msgBuffer, "Done.\n")
 	}
-	msgBuffer = printMsgBuffer(msgBuffer)
 	return err
 }
 

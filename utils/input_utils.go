@@ -15,10 +15,10 @@ import (
 func ParseDesignFile(filename string) datamodels.Experiment {
 	var samples = make([]datamodels.Sample, 0)
 
-	fmt.Printf("Parsing design file... ")
+	fmt.Printf("Parsing design file... \n")
 
 	// Initialize a new experiment
-	experiment := datamodels.NewExperiment()
+	experiment := datamodels.DefaultExperiment()
 
 	// Open the file for buffer based read.
 	fileBuf, err := os.Open(filename)
@@ -68,7 +68,6 @@ func ParseDesignFile(filename string) datamodels.Experiment {
 	experiment.Samples = samples
 	// Generate new analysis id
 	experiment.NewAnalysisID()
-	fmt.Printf("Done.\n")
 	return experiment
 }
 
