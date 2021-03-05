@@ -125,8 +125,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-<<<<<<< HEAD
-=======
 	}
 
 	// Archive the param file.
@@ -141,7 +139,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
->>>>>>> feature/add-config-preserve
 	}
 
 	// Write the job files.
