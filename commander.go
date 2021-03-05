@@ -125,6 +125,23 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+<<<<<<< HEAD
+=======
+	}
+
+	// Archive the param file.
+	_, err = utils.ArchiveParamFile(paramFile, experiment)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	// Archive the design file.
+	_, err = utils.ArchiveDesignFile(designFile, experiment)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+>>>>>>> feature/add-config-preserve
 	}
 
 	// Write the job files.

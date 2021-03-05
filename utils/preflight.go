@@ -3,7 +3,9 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"commander/datamodels"
 )
@@ -56,7 +58,96 @@ func PreflightTests(job datamodels.Job) error {
 			return err
 		}
 	}
+
+	// Test configuration archive directory.
+	err = testArchiveDirectory(experiment)
+	if err != nil {
+		return err
+	}
+
+	// Test logging directory.
+	err = testLoggingDirectory(experiment)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+/* -----------------------------------------------------------------------------
+ * Preflight configuration preservation.
+ * -------------------------------------------------------------------------- */
+func ArchiveParamFile(paramFile string, experiment datamodels.Experiment) (int64, error) {
+	var paramFileName string
+	var msgBuffer = newMsgBuffer()
+
+	msgBuffer = append(msgBuffer, "Archiving parameter file... ")
+	// Get paramfile name.
+	if strings.Contains(paramFile, "/") {
+		chunks := strings.Split(paramFile, "/")
+		paramFileName = chunks[len(chunks)-1]
+	} else {
+		paramFileName = paramFile
+	}
+
+	// Create the param file destination!
+	paramDstPath := fmt.Sprintf("%s/config/%s", experiment.PrintAnalysisPath(), paramFileName)
+
+	paramFileSrc, err := os.Open(paramFile)
+	if err != nil {
+		return 0, err
+	}
+	defer paramFileSrc.Close()
+
+	paramFileDst, err := os.Create(paramDstPath)
+	if err != nil {
+		return 0, err
+	}
+	defer paramFileDst.Close()
+
+	nBytes, err := io.Copy(paramFileDst, paramFileSrc)
+	if err != nil {
+		return 0, err
+	}
+	msgBuffer = append(msgBuffer, "Done\n")
+	printMsgBuffer(msgBuffer)
+	return nBytes, nil
+}
+
+func ArchiveDesignFile(designFile string, experiment datamodels.Experiment) (int64, error) {
+	var designFileName string
+	var msgBuffer = newMsgBuffer()
+
+	msgBuffer = append(msgBuffer, "Archiving design file... ")
+	// Get the designfile name.
+	if strings.Contains(designFile, "/") {
+		chunks := strings.Split(designFile, "/")
+		designFileName = chunks[len(chunks)-1]
+	} else {
+		designFileName = designFile
+	}
+
+	// Create the param file destination!
+	designDstPath := fmt.Sprintf("%s/config/%s", experiment.PrintAnalysisPath(), designFileName)
+
+	designFileSrc, err := os.Open(designFile)
+	if err != nil {
+		return 0, err
+	}
+	defer designFileSrc.Close()
+
+	designFileDst, err := os.Create(designDstPath)
+	if err != nil {
+		return 0, err
+	}
+	defer designFileDst.Close()
+
+	nBytes, err := io.Copy(designFileDst, designFileSrc)
+	if err != nil {
+		return 0, err
+	}
+	msgBuffer = append(msgBuffer, "Done\n")
+	printMsgBuffer(msgBuffer)
+	return nBytes, nil
 }
 
 /* -----------------------------------------------------------------------------
@@ -214,6 +305,62 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 		err = errors.New(errString)
 	}
 	return err
+}
+
+/* ---
+ * Check for the existence of the archive directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/config
+ * --- */
+func testArchiveDirectory(experiment datamodels.Experiment) error {
+	msgBuffer := newMsgBuffer()
+	archivePath := fmt.Sprintf("%s/config", experiment.PrintAnalysisPath())
+
+	// Check for the existence of the config directory.
+	_, err := os.Stat(archivePath)
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Archive directory %s does not exist.\n", archivePath))
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Creating directory... "))
+		err = os.MkdirAll(archivePath, 0755)
+		if err != nil {
+			return err
+		}
+		msgBuffer = append(msgBuffer, "Done\n")
+		msgBuffer = printMsgBuffer(msgBuffer)
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+/* ---
+ * Check for the existence of the logs directory.
+ * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/logs
+ * --- */
+func testLoggingDirectory(experiment datamodels.Experiment) error {
+	msgBuffer := newMsgBuffer()
+	logPath := fmt.Sprintf("%s/logs", experiment.PrintAnalysisPath())
+
+	// Check for the existence of the config directory.
+	_, err := os.Stat(logPath)
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Logging directory %s does not exist.\n", logPath))
+		msgBuffer = append(msgBuffer, fmt.Sprintf("Creating directory... "))
+		err = os.MkdirAll(logPath, 0755)
+		if err != nil {
+			return err
+		}
+		msgBuffer = append(msgBuffer, "Done\n")
+		msgBuffer = printMsgBuffer(msgBuffer)
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 /* ---
