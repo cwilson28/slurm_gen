@@ -59,6 +59,7 @@ func PreflightTests(job datamodels.Job) error {
 		}
 	}
 
+	fmt.Println("Checking the existence of configuration archive directories...\n")
 	// Test configuration archive directory.
 	err = testArchiveDirectory(experiment)
 	if err != nil {
@@ -78,9 +79,8 @@ func PreflightTests(job datamodels.Job) error {
  * -------------------------------------------------------------------------- */
 func ArchiveParamFile(paramFile string, experiment datamodels.Experiment) (int64, error) {
 	var paramFileName string
-	var msgBuffer = newMsgBuffer()
 
-	msgBuffer = append(msgBuffer, "Archiving parameter file... ")
+	fmt.Printf("Archiving parameter file... \n")
 	// Get paramfile name.
 	if strings.Contains(paramFile, "/") {
 		chunks := strings.Split(paramFile, "/")
@@ -91,7 +91,6 @@ func ArchiveParamFile(paramFile string, experiment datamodels.Experiment) (int64
 
 	// Create the param file destination!
 	paramDstPath := fmt.Sprintf("%s/config/%s", experiment.PrintAnalysisPath(), paramFileName)
-
 	paramFileSrc, err := os.Open(paramFile)
 	if err != nil {
 		return 0, err
@@ -108,16 +107,15 @@ func ArchiveParamFile(paramFile string, experiment datamodels.Experiment) (int64
 	if err != nil {
 		return 0, err
 	}
-	msgBuffer = append(msgBuffer, "Done\n")
-	printMsgBuffer(msgBuffer)
+	fmt.Printf("Done.\n\n")
 	return nBytes, nil
 }
 
-func ArchiveDesignFile(designFile string, experiment datamodels.Experiment) (int64, error) {
+func ArchiveDesignFile(experiment datamodels.Experiment) (int64, error) {
 	var designFileName string
-	var msgBuffer = newMsgBuffer()
+	designFile := experiment.SamplesFile
 
-	msgBuffer = append(msgBuffer, "Archiving design file... ")
+	fmt.Printf("Archiving design file... \n")
 	// Get the designfile name.
 	if strings.Contains(designFile, "/") {
 		chunks := strings.Split(designFile, "/")
@@ -128,7 +126,6 @@ func ArchiveDesignFile(designFile string, experiment datamodels.Experiment) (int
 
 	// Create the param file destination!
 	designDstPath := fmt.Sprintf("%s/config/%s", experiment.PrintAnalysisPath(), designFileName)
-
 	designFileSrc, err := os.Open(designFile)
 	if err != nil {
 		return 0, err
@@ -145,8 +142,7 @@ func ArchiveDesignFile(designFile string, experiment datamodels.Experiment) (int
 	if err != nil {
 		return 0, err
 	}
-	msgBuffer = append(msgBuffer, "Done\n")
-	printMsgBuffer(msgBuffer)
+	fmt.Printf("Done.\n\n")
 	return nBytes, nil
 }
 
@@ -296,10 +292,10 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 	}
 
 	// Path is a directory, test write permissions
-	fmt.Printf("Testing write permissions on directory %s\n", path)
+	fmt.Printf("Testing write permissions on directory %s\n\n", path)
 	err = createTestFile(path)
 	if err != nil {
-		fmt.Printf("Directory is not writeable. Permissions are %s\n", dirInfo.Mode().Perm())
+		fmt.Printf("Directory is not writeable. Permissions are %s\n\n", dirInfo.Mode().Perm())
 		// Trigger an error.
 		errString := fmt.Sprintf("Permission error. Please check that you have correct privleges on %s.", path)
 		err = errors.New(errString)
@@ -312,7 +308,6 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
  * This directory follows the convention /compbio/analysis/<PI>/<experiment>/<analysis_id>/config
  * --- */
 func testArchiveDirectory(experiment datamodels.Experiment) error {
-	msgBuffer := newMsgBuffer()
 	archivePath := fmt.Sprintf("%s/config", experiment.PrintAnalysisPath())
 
 	// Check for the existence of the config directory.
@@ -320,14 +315,12 @@ func testArchiveDirectory(experiment datamodels.Experiment) error {
 	if err != nil && os.IsNotExist(err) {
 		// Notify the user the directory does not exist and that we will create
 		// the directory.
-		msgBuffer = append(msgBuffer, fmt.Sprintf("Archive directory %s does not exist.\n", archivePath))
-		msgBuffer = append(msgBuffer, fmt.Sprintf("Creating directory... "))
+		fmt.Printf("Archive directory %s does not exist.\n", archivePath)
+		fmt.Printf("Creating directory... \n")
 		err = os.MkdirAll(archivePath, 0755)
 		if err != nil {
 			return err
 		}
-		msgBuffer = append(msgBuffer, "Done\n")
-		msgBuffer = printMsgBuffer(msgBuffer)
 		return nil
 	} else if err != nil {
 		return err

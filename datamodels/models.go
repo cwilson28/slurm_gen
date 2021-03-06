@@ -103,21 +103,21 @@ func (j *Job) IsPipeline() bool {
 	return false
 }
 
-func (j *Job) InitializeCMDIOPaths(e Experiment) {
+func (j *Job) InitializeCMDIOPaths() {
 	for i := range j.Commands {
 
 		if j.Commands[i].InputFromStep == "" {
 			// Command does not expext input as output from a previous command.
 			// Use raw sample path as input path prefix.
-			j.Commands[i].InputPathPrefix = e.PrintRawSamplePath()
+			j.Commands[i].InputPathPrefix = j.ExperimentDetails.PrintRawSamplePath()
 		} else {
 			// Otherwise, the input is the output of a previous step in the
 			// pipeline. The input path should reflect this
-			j.Commands[i].InputPathPrefix = fmt.Sprintf("%s/%s", e.PrintAnalysisPath(), j.Commands[i].InputFromStep)
+			j.Commands[i].InputPathPrefix = fmt.Sprintf("%s/%s", j.ExperimentDetails.PrintAnalysisPath(), j.Commands[i].InputFromStep)
 		}
 
 		// The output path prefix should account for the tool name
-		j.Commands[i].OutputPathPrefix = fmt.Sprintf("%s/%s", e.PrintAnalysisPath(), j.Commands[i].CommandName())
+		j.Commands[i].OutputPathPrefix = fmt.Sprintf("%s/%s", j.ExperimentDetails.PrintAnalysisPath(), j.Commands[i].CommandName())
 	}
 }
 

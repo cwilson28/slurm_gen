@@ -17,7 +17,6 @@ func ShowHelp() {
 func main() {
 	var err error
 	var job datamodels.Job
-	var experiment datamodels.Experiment
 	var platform string
 	var sge, slurm, submit, preflight bool
 
@@ -117,7 +116,7 @@ func main() {
 	job.ExperimentDetails.InitializePaths()
 
 	// Initialize all input and output paths for the commands.
-	job.InitializeCMDIOPaths(experiment)
+	job.InitializeCMDIOPaths()
 
 	// Perform preflight experiment path checks.
 	if preflight {
@@ -128,14 +127,14 @@ func main() {
 	}
 
 	// Archive the param file.
-	_, err = utils.ArchiveParamFile(paramFile, experiment)
+	_, err = utils.ArchiveParamFile(paramFile, job.ExperimentDetails)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 
 	// Archive the design file.
-	_, err = utils.ArchiveDesignFile(designFile, experiment)
+	_, err = utils.ArchiveDesignFile(job.ExperimentDetails)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
@@ -144,7 +143,7 @@ func main() {
 	// Write the job files.
 	if slurm {
 		fmt.Println("Writing slurm job script...")
-		err = utils.WriteSlurmJobScript(job, experiment)
+		err = utils.WriteSlurmJobScript(job, job.ExperimentDetails)
 		if err != nil {
 			log.Fatal(err)
 			os.Exit(1)
@@ -152,7 +151,7 @@ func main() {
 		fmt.Println("Done.")
 	} else if sge {
 		fmt.Println("Writing sge job script...")
-		err = utils.WriteSGEJobScript(job, experiment)
+		err = utils.WriteSGEJobScript(job, job.ExperimentDetails)
 		if err != nil {
 			log.Fatal(err)
 			os.Exit(1)
