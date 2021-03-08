@@ -100,21 +100,30 @@ var HELP_MSG = `
 			on the user's behalf.
 			** At this time, no consideration is given for overwriting existing output. **
 
+			As part of the preflight checks, commander will also create the following directories:
+			<path_to_analysis_dir>/conf
+			<path_to_analysis_dir>/logs
+
+			Commander will archive the supplied parameter file and any accompanying design files 
+			under <path_to_analysis_dir>/conf. All job log files (e.g., those produced by slurm or sge)
+			will be written to <path_to_analysis_dir>/logs.
+
 	Arguments:
-	A single parameter file that defines the workflow to be executed.
+	A single parameter file that defines the workflow to be executed. This file is expected to conform to the JSON 
+	specification.
 	
 	Example usage:
 
 	# With parameters specified in JSON format.
-	commander --slurm worflow-params.json
+	commander --slurm --preflight commander_test_params.json
 
 	# With parameters specified in plaintext format.
-	commander --sge workflow-params.txt
+	commander --sge --preflight commander_test_params.json
 
 	Output:
 	If the --slurm option is provided, commander will produce a main .slurm file that can
 	be submitted to a Slurm cluster using sbatch.
 
-	If the --sge options is provided, commander will produce a main .qsub file that can be
+	If the --sge options is provided, commander will produce a main .sh file that can be
 	submitted to a SGE cluster using qsub.
 `

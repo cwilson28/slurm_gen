@@ -133,11 +133,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Archive the design file.
-	_, err = utils.ArchiveDesignFile(job.ExperimentDetails)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+	// Archive the design file if one is given.
+	if job.ExperimentDetails.SamplesFile != "" {
+		_, err = utils.ArchiveDesignFile(job.ExperimentDetails)
+		if err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+
 	}
 
 	// Write the job files.

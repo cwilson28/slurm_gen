@@ -48,7 +48,6 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	// Extract and set experiment details from the json file.
 	// If no experiment block is provided, this will initialize a default experiment.
 	job.ExperimentDetails = experimentDetailsFromJSON(jsonParsed)
-	fmt.Printf("%+v\n", job)
 
 	// Extract and set any platform specific preamble.
 	if Platform == "slurm" {
