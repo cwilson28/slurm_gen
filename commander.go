@@ -112,6 +112,10 @@ func main() {
 		}
 	}
 
+	// Initialize experiment sample objects.
+	samples := utils.ParseSamplesFile(job.ExperimentDetails.SamplesFile)
+	job.ExperimentDetails.Samples = samples
+
 	// Initialize all input paths for the samples.
 	job.ExperimentDetails.InitializePaths()
 

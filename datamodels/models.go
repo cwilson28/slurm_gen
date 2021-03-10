@@ -53,7 +53,7 @@ type Job struct {
 	SGEPreamble       SGEPreamble
 	MiscPreamble      MiscPreamble
 	Commands          []Command
-	CleanupActions    []string
+	CleanupActions    []CleanupAction
 }
 
 type JobDetails struct {
@@ -96,6 +96,13 @@ type Sample struct {
 	ReverseReadFile string
 }
 
+type CleanupAction struct {
+	ToolName    string
+	Action      string
+	Source      string
+	Destination string
+}
+
 func (j *Job) IsPipeline() bool {
 	if len(j.Commands) > 1 {
 		return true
@@ -119,6 +126,23 @@ func (j *Job) InitializeCMDIOPaths() {
 		// The output path prefix should account for the tool name
 		j.Commands[i].OutputPathPrefix = fmt.Sprintf("%s/%s", j.ExperimentDetails.PrintAnalysisPath(), j.Commands[i].CommandName())
 	}
+}
+
+func (j *Job) FormatCleanupActions() []string {
+	var cleanupActions = make([]string, 0)
+
+	for _, cua := range j.CleanupActions {
+		sourcePath := fmt.Sprintf("%s/%s/%s", j.ExperimentDetails.PrintAnalysisPath(), cua.ToolName, cua.Source)
+		if cua.Action == "mv" || cua.Action == "cp" {
+			destPath := fmt.Sprintf("%s/%s", j.ExperimentDetails.PrintAnalysisPath(), cua.Destination)
+			actionString := fmt.Sprintf("%s %s %s", cua.Action, sourcePath, destPath)
+			cleanupActions = append(cleanupActions, actionString)
+		} else {
+			actionString := fmt.Sprintf("%s %s", cua.Action, sourcePath)
+			cleanupActions = append(cleanupActions, actionString)
+		}
+	}
+	return cleanupActions
 }
 
 /* --- Class functions --- */

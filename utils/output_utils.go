@@ -30,16 +30,13 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	// Write the slurm preamble for the parent slurm script
 	writeSlurmJobPreamble(slurmFile, job.Details.Name, job.SlurmPreamble)
 
-	// Write any miscellaneous preamble.
-	writeMiscPreamble(slurmFile, job.MiscPreamble)
-
 	// Write the max CPUs for this job. For pipeline jobs, this will be the
 	// max CPUs requested by any single step in the pipeline. For single command
 	// jobs, this will be the CPUs required for that command.
 	writeJobCPU(slurmFile, job)
 
-	// Write intermediary job shit.
-	writeIntermediateJobShit(slurmFile)
+	// Write any miscellaneous preamble.
+	writeMiscPreamble(slurmFile, job.MiscPreamble)
 
 	/* ---
 	 * All slurm preamble is written at this point. All that remains is to write
@@ -52,7 +49,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	if len(job.Commands) > 1 {
 		fmt.Println("Writing pipeline slurm script...")
 		err = writePipelineSlurmScript(slurmFile, job, experiment)
-		writeCleanupActions(slurmFile, job.CleanupActions)
+		writeCleanupActions(slurmFile, job.FormatCleanupActions())
 		return err
 	}
 
@@ -76,7 +73,7 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	writeSlurmCommandPreamble(slurmFile, cmd.Preamble)
 	writeCommandOptions(slurmFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(slurmFile, cmd.CommandParams.CommandArgs)
-	writeCleanupActions(slurmFile, job.CleanupActions)
+	writeCleanupActions(slurmFile, job.FormatCleanupActions())
 	return nil
 }
 
@@ -143,7 +140,7 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	}
 	writeCommandOptions(sgeFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(sgeFile, cmd.CommandParams.CommandArgs)
-	writeCleanupActions(sgeFile, job.CleanupActions)
+	writeCleanupActions(sgeFile, job.FormatCleanupActions())
 	return nil
 }
 

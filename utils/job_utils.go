@@ -107,7 +107,10 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	job.Commands = commands
 
 	// Extract any cleanup actions for the job.
-	cleanup := cleanupFromJSON(jsonParsed)
+	cleanup, err := cleanupFromJSON(jsonParsed)
+	if err != nil {
+		return job, err
+	}
 	job.CleanupActions = cleanup
 	return job, nil
 }
@@ -492,17 +495,40 @@ func volumesFromJSON(jsonParsed *gabs.Container) string {
 	return volString
 }
 
-func cleanupFromJSON(jsonParsed *gabs.Container) []string {
-	var cleanupActions = make([]string, 0)
+func cleanupFromJSON(jsonParsed *gabs.Container) ([]datamodels.CleanupAction, error) {
+	var err error
+	var cleanupActions = make([]datamodels.CleanupAction, 0)
 
 	if jsonParsed.Exists("cleanup") {
 		children := jsonParsed.Path("cleanup").Children()
-
 		for _, c := range children {
-			cleanupActions = append(cleanupActions, c.Data().(string))
+			targets := c.Path("targets").Children()
+			for _, t := range targets {
+				cua := datamodels.CleanupAction{}
+				cua.ToolName = c.Path("tool_name").Data().(string)
+				cua.Action = c.Path("action").Data().(string)
+				if cua.Action != "rm" && cua.Action != "mv" && cua.Action != "cp" {
+					err = fmt.Errorf(`json template error: unsupported clean-up action "%s". Commander currently supports rm, mv and cp`, cua.Action)
+					return cleanupActions, err
+				}
+				// Source is expected for all cleanup actions.
+				cua.Source = t.Path("source").Data().(string)
+
+				// Destination is required for mv and cp actions.
+				if cua.Action == "mv" || cua.Action == "cp" {
+					if !t.Exists("destination") {
+						err = fmt.Errorf(`json template error: clean-up action "%s" is missing a destination argument`, cua.Action)
+						return cleanupActions, err
+					}
+					cua.Destination = t.Path("destination").Data().(string)
+				} else if t.Exists("destination") {
+					cua.Destination = t.Path("destination").Data().(string)
+				}
+				cleanupActions = append(cleanupActions, cua)
+			}
 		}
 	}
-	return cleanupActions
+	return cleanupActions, nil
 }
 
 /* -----------------------------------------------------------------------------
