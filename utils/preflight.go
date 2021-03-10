@@ -59,6 +59,20 @@ func PreflightTests(job datamodels.Job) error {
 		}
 	}
 
+	if len(job.CleanupActions) > 0 {
+		fmt.Println("Checking the existence of cleanup action destination paths...\n")
+		for _, a := range job.CleanupActions {
+			baseDir := job.ExperimentDetails.PrintAnalysisPath()
+			sourcePath := fmt.Sprintf("%s/%s", baseDir, a.ToolName)
+			destPath := fmt.Sprintf("%s/%s", baseDir, a.Destination)
+			err = testCleanupPaths(a.Action, sourcePath, destPath)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
 	fmt.Println("Checking the existence of configuration archive directories...\n")
 	// Test configuration archive directory.
 	err = testArchiveDirectory(experiment)
@@ -301,6 +315,39 @@ func testToolOutputDirectory(experiment datamodels.Experiment, tool string) erro
 		err = errors.New(errString)
 	}
 	return err
+}
+
+/* ---
+ * Check for the existence of a cleanup action destination directory.
+ * --- */
+func testCleanupPaths(action, sourcePath, destPath string) error {
+
+	cleanupAction := fmt.Sprintf("%s %s %s", action, sourcePath, destPath)
+	// Check for the existence of the config directory.
+	_, err := os.Stat(sourcePath)
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		fmt.Printf("Source directory for cleanup action '%s' does not exist.\n", cleanupAction)
+		fmt.Printf("Creating directory... \n\n")
+		err = os.MkdirAll(sourcePath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = os.Stat(destPath)
+	if err != nil && os.IsNotExist(err) {
+		// Notify the user the directory does not exist and that we will create
+		// the directory.
+		fmt.Printf("Destination directory for cleanup action '%s' does not exist.\n", cleanupAction)
+		fmt.Printf("Creating directory... \n\n")
+		err = os.MkdirAll(destPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /* ---
