@@ -339,7 +339,7 @@ func writeBashScriptHeader(outfile *os.File) {
 func writeSingularityPreamble(outfile *os.File, cmd datamodels.Command) {
 	// Write singularity shit.
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
-	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.Volume)))
+	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.PrintMountString())))
 	// fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityImage)))
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
 }
@@ -394,13 +394,15 @@ func writeKallistoQuantOptions(outfile *os.File, command datamodels.Command, sam
 /* ---
  * Format and write trim_galore specific arguments.
  * --- */
-func writeTrimGaloreArguments(outfile *os.File, sample datamodels.Sample) {
+func writeTrimGaloreArguments(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
 	// Write the forward read file arg to the script.
-	writeCommandArg(outfile, sample.DumpForwardReadFileWithPath())
+	arg := fmt.Sprintf("%s/%s", command.InputPathPrefix, sample.DumpForwardReadFile(false))
+	writeCommandArg(outfile, arg)
 
 	if sample.IsPairedEnd() {
 		// Write the reverse read file arg to the script.
-		writeCommandArg(outfile, sample.DumpReverseReadFileWithPath())
+		arg := fmt.Sprintf("%s/%s", command.InputPathPrefix, sample.DumpReverseReadFile(false))
+		writeCommandArg(outfile, arg)
 	}
 }
 
@@ -493,7 +495,7 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	// Write command args.
 	if command.CommandName() == "trim_galore" {
 		// Format and write trim_galore arguments.
-		writeTrimGaloreArguments(outfile, sample)
+		writeTrimGaloreArguments(outfile, command, sample)
 	} else if command.CommandName() == "rsem-calculate-expression" {
 		// Format and write rsem arguments.
 		writeRSEMArguments(outfile, command, sample)
