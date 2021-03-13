@@ -430,7 +430,7 @@ func commandParamsFromJSON(jsonParsed *gabs.Container) (datamodels.CommandParams
 	}
 	if jsonParsed.Exists("volumes") {
 		volumes := jsonParsed.Path("volumes")
-		params.Volume = volumesFromJSON(volumes)
+		params.Volumes = volumesFromJSON(volumes)
 	} else {
 		err = errors.New(`JSON error: Missing parameter "volumes"`)
 		return params, err
@@ -480,19 +480,18 @@ func commandArgumentsFromJSON(jsonParsed *gabs.Container) []string {
 	return arguments
 }
 
-func volumesFromJSON(jsonParsed *gabs.Container) string {
-	var volString = ""
+func volumesFromJSON(jsonParsed *gabs.Container) []datamodels.VolumeMount {
+	var volumes = make([]datamodels.VolumeMount, 0)
 	children := jsonParsed.Children()
 
 	for _, c := range children {
-		hostPath := c.Path("host_path").Data().(string)
-		containerPath := c.Path("container_path").Data().(string)
-		if volString != "" {
-			volString += ","
+		v := datamodels.VolumeMount{
+			HostPath:      c.Path("host_path").Data().(string),
+			ContainerPath: c.Path("container_path").Data().(string),
 		}
-		volString += fmt.Sprintf("%s:%s", hostPath, containerPath)
+		volumes = append(volumes, v)
 	}
-	return volString
+	return volumes
 }
 
 func cleanupFromJSON(jsonParsed *gabs.Container) ([]datamodels.CleanupAction, error) {
@@ -568,8 +567,6 @@ func setCommandParams(tag, val string, params *datamodels.CommandParams) {
 		params.SingularityImage = val
 	} else if tag == "WORK_DIR" {
 		params.WorkDir = val
-	} else if tag == "VOLUME" {
-		params.Volume = val
 	} else if tag == "COMMAND" {
 		params.Command = val
 	} else if tag == "SUBCOMMAND" {

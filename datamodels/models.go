@@ -39,7 +39,7 @@ type CommandParams struct {
 	SingularityPath  string
 	SingularityImage string
 	WorkDir          string
-	Volume           string
+	Volumes          []VolumeMount
 	Command          string
 	Subcommand       string
 	CommandOptions   []string
@@ -103,6 +103,27 @@ type CleanupAction struct {
 	Destination string
 }
 
+type VolumeMount struct {
+	HostPath      string
+	ContainerPath string
+}
+
+func (v *VolumeMount) MountString() string {
+	return fmt.Sprintf("%s:%s", v.HostPath, v.ContainerPath)
+}
+
+func (c *CommandParams) PrintMountString() string {
+	var mountString = ""
+	for _, v := range c.Volumes {
+		if mountString == "" {
+			mountString += v.MountString()
+		} else {
+			mountString += "," + v.MountString()
+		}
+	}
+	return mountString
+}
+
 func (j *Job) IsPipeline() bool {
 	if len(j.Commands) > 1 {
 		return true
@@ -111,20 +132,31 @@ func (j *Job) IsPipeline() bool {
 }
 
 func (j *Job) InitializeCMDIOPaths() {
+	var samplePath, analysisPath string
 	for i := range j.Commands {
-
+		cmd := j.Commands[i]
+		for _, v := range cmd.CommandParams.Volumes {
+			if strings.Contains(j.ExperimentDetails.PrintRawSamplePath(), v.HostPath) {
+				// Replace the parent path to the sample directory with the container mount path.
+				samplePath = strings.ReplaceAll(j.ExperimentDetails.PrintRawSamplePath(), v.HostPath, v.ContainerPath)
+			}
+			if strings.Contains(j.ExperimentDetails.PrintAnalysisPath(), v.HostPath) {
+				// Replace the parent path to the sample directory with the container mount path.
+				analysisPath = strings.ReplaceAll(j.ExperimentDetails.PrintAnalysisPath(), v.HostPath, v.ContainerPath)
+			}
+		}
 		if j.Commands[i].InputFromStep == "" {
 			// Command does not expext input as output from a previous command.
 			// Use raw sample path as input path prefix.
-			j.Commands[i].InputPathPrefix = j.ExperimentDetails.PrintRawSamplePath()
+			j.Commands[i].InputPathPrefix = samplePath
 		} else {
 			// Otherwise, the input is the output of a previous step in the
 			// pipeline. The input path should reflect this
-			j.Commands[i].InputPathPrefix = fmt.Sprintf("%s/%s", j.ExperimentDetails.PrintAnalysisPath(), j.Commands[i].InputFromStep)
+			j.Commands[i].InputPathPrefix = fmt.Sprintf("%s/%s", analysisPath, j.Commands[i].InputFromStep)
 		}
 
 		// The output path prefix should account for the tool name
-		j.Commands[i].OutputPathPrefix = fmt.Sprintf("%s/%s", j.ExperimentDetails.PrintAnalysisPath(), j.Commands[i].CommandName())
+		j.Commands[i].OutputPathPrefix = fmt.Sprintf("%s/%s", analysisPath, j.Commands[i].CommandName())
 	}
 }
 
