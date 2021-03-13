@@ -128,23 +128,21 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	// Archive the param file.
-	_, err = utils.ArchiveParamFile(paramFile, job.ExperimentDetails)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-
-	// Archive the design file if one is given.
-	if job.ExperimentDetails.SamplesFile != "" {
-		_, err = utils.ArchiveDesignFile(job.ExperimentDetails)
+		// Archive the param file.
+		_, err = utils.ArchiveParamFile(paramFile, job.ExperimentDetails)
 		if err != nil {
 			log.Fatal(err)
 			os.Exit(1)
 		}
 
+		// Archive the design file if one is given.
+		if job.ExperimentDetails.SamplesFile != "" {
+			_, err = utils.ArchiveDesignFile(job.ExperimentDetails)
+			if err != nil {
+				log.Fatal(err)
+				os.Exit(1)
+			}
+		}
 	}
 
 	// Write the job files.
