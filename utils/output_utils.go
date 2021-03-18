@@ -354,7 +354,14 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 		if chunks[0] == "--outFileNamePrefix" {
 			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", command.OutputPathPrefix, sample.Prefix))
 		} else if chunks[0] == "--readFilesIn" {
-			opt = fmt.Sprintf("%s %s", chunks[0], command.InputPathPrefix)
+			noExt := true
+			forwardReadFile := fmt.Sprintf("%s/%s", command.InputPathPrefix, sample.DumpForwardReadFile(noExt))
+			if sample.ReverseReadFile != "" {
+				reverseReadFile := fmt.Sprintf("%s/%s", command.InputPathPrefix, sample.DumpReverseReadFile(noExt))
+				opt = fmt.Sprintf("%s %s %s", chunks[0], forwardReadFile, reverseReadFile)
+			} else {
+				opt = fmt.Sprintf("%s %s", chunks[0], forwardReadFile)
+			}
 		}
 		writeCommandOption(outfile, opt)
 	}
