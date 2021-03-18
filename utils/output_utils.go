@@ -352,9 +352,9 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 	for _, opt := range command.CommandParams.CommandOptions {
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--outFileNamePrefix" {
-			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
+			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", command.OutputPathPrefix, sample.Prefix))
 		} else if chunks[0] == "--readFilesIn" {
-			opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
+			opt = fmt.Sprintf("%s %s", chunks[0], command.InputPathPrefix)
 		}
 		writeCommandOption(outfile, opt)
 	}
