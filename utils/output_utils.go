@@ -352,7 +352,7 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 	for _, opt := range command.CommandParams.CommandOptions {
 		chunks := strings.Split(opt, " ")
 		if chunks[0] == "--outFileNamePrefix" {
-			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/star/%s_", sample.OutputPath, sample.Prefix))
+			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", sample.OutputPath, sample.Prefix))
 		} else if chunks[0] == "--readFilesIn" {
 			opt = fmt.Sprintf("%s %s", chunks[0], sample.DumpReadFiles())
 		}
@@ -452,6 +452,17 @@ func writeKallistoQuantArguments(outfile *os.File, command datamodels.Command, s
 }
 
 /* ---
+ * Format and write samtools index specific arguments.
+ * --- */
+func writeSamtoolsIndexArguments(outfile *os.File, command datamodels.Command, sample datamodels.Sample) {
+	noExt := true
+	forwardReads := fmt.Sprintf("%s/%s_val_1.fq.gz", command.InputPathPrefix, sample.DumpForwardReadFile(noExt))
+	reverseReads := fmt.Sprintf("%s/%s_val_2.fq.gz", command.InputPathPrefix, sample.DumpReverseReadFile(noExt))
+	writeCommandArg(outfile, fmt.Sprintf("%s", forwardReads))
+	writeCommandArg(outfile, fmt.Sprintf("%s", reverseReads))
+}
+
+/* ---
  * Write a command script for a given command given a particular sample.
  *  --- */
 func writeCommandScriptForSample(command datamodels.Command, sample datamodels.Sample) (string, error) {
@@ -505,6 +516,9 @@ func writeCommandScriptForSample(command datamodels.Command, sample datamodels.S
 	} else if command.CommandName() == "kallisto" && command.SubCommandName() == "quant" {
 		// Format and write kallisto quant arguments.
 		writeKallistoQuantArguments(outfile, command, sample)
+	} else if command.CommandName() == "samtools" && command.SubCommandName() == "index" {
+		// Format and write kallisto quant arguments.
+		writeSamtoolsIndexArguments(outfile, command, sample)
 	} else {
 		// Otherwise, write the arguments as they were provided.
 		writeCommandArgs(outfile, command.CommandParams.CommandArgs)

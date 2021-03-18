@@ -238,7 +238,7 @@ func commandNameFromJSON(jsonParsed *gabs.Container) (string, error) {
 }
 
 func inputFromStep(jsonParsed *gabs.Container) string {
-	if jsonParsed.Exists("input_from_step") {
+	if jsonParsed.Exists("input_from_step") && jsonParsed.Path("input_from_step").Data() != nil {
 		return jsonParsed.Path("input_from_step").Data().(string)
 	}
 	return ""
