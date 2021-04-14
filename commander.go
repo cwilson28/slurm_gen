@@ -113,11 +113,13 @@ func main() {
 	}
 
 	// Initialize experiment sample objects.
-	samples := utils.ParseSamplesFile(job.ExperimentDetails.SamplesFile)
-	job.ExperimentDetails.Samples = samples
+	if job.ExperimentDetails.SamplesFile != "" {
+		samples := utils.ParseSamplesFile(job.ExperimentDetails.SamplesFile)
+		job.ExperimentDetails.Samples = samples
 
-	// Initialize all input paths for the samples.
-	job.ExperimentDetails.InitializePaths()
+		// Initialize all input paths for the samples.
+		job.ExperimentDetails.InitializePaths()
+	}
 
 	// Initialize all input and output paths for the commands.
 	job.InitializeCMDIOPaths()

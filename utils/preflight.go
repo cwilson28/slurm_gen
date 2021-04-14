@@ -21,7 +21,7 @@ func PreflightTests(job datamodels.Job) error {
 	fmt.Println("Performing pipeline preflight checks...\n")
 	err = testSampleDirectory(experiment)
 	if err != nil {
-		return err
+		fmt.Printf("WARNING: %s\n", err.Error())
 	}
 
 	// Test existence of sample files.
@@ -172,7 +172,7 @@ func testSampleDirectory(experiment datamodels.Experiment) error {
 	if err != nil && os.IsNotExist(err) {
 		// Format custom message for user.
 		errString := fmt.Sprintf(
-			"Sample directory %s does not exist. \nPlease check that you have specified the sample path correctly.",
+			"Sample directory %s does not exist. \nPlease check that you have specified the sample path correctly.\n",
 			experiment.PrintRawSamplePath(),
 		)
 		return errors.New(errString)

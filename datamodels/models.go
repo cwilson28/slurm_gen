@@ -54,6 +54,7 @@ type Job struct {
 	MiscPreamble      MiscPreamble
 	Commands          []Command
 	CleanupActions    []CleanupAction
+	CleanUp           []string
 }
 
 type JobDetails struct {

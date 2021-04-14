@@ -71,6 +71,13 @@ func WriteSlurmJobScript(job datamodels.Job, experiment datamodels.Experiment) e
 	// The command is not a batch command, write the command to the slurm file
 	// we opened earlier.
 	writeSlurmCommandPreamble(slurmFile, cmd.Preamble)
+	writeSingularityPreamble(slurmFile, cmd)
+	// Write the command we are calling.
+	if cmd.SubCommandName() != "" {
+		fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], fmt.Sprintf("%s %s", cmd.CommandName(), cmd.SubCommandName()))))
+	} else {
+		fmt.Fprintln(slurmFile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["command"], cmd.CommandName())))
+	}
 	writeCommandOptions(slurmFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(slurmFile, cmd.CommandParams.CommandArgs)
 	writeCleanupActions(slurmFile, job.FormatCleanupActions())
@@ -109,7 +116,7 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	// format.
 	// if len(job.Commands) > 1 {
 	// 	fmt.Println("Writing pipeline slurm script...")
-	// 	err = writePipelineSlurmScript(sgeFile, job)
+	// 	err = writePipelineSGEScript(sgeFile, job, experiment)
 	// 	return err
 	// }
 
@@ -140,7 +147,7 @@ func WriteSGEJobScript(job datamodels.Job, experiment datamodels.Experiment) err
 	}
 	writeCommandOptions(sgeFile, cmd.CommandParams.CommandOptions)
 	writeCommandArgs(sgeFile, cmd.CommandParams.CommandArgs)
-	writeCleanupActions(sgeFile, job.FormatCleanupActions())
+	writeCleanupActions(sgeFile, job.CleanUp)
 	return nil
 }
 
@@ -340,6 +347,10 @@ func writeSingularityPreamble(outfile *os.File, cmd datamodels.Command) {
 	// Write singularity shit.
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", datamodels.JOB_SHIT["singularity_cmd"]))
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_bind"], cmd.CommandParams.PrintMountString())))
+	if cmd.CommandParams.WorkDir != "" {
+		fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_workdir"], cmd.CommandParams.WorkDir)))
+
+	}
 	// fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityImage)))
 	fmt.Fprintln(outfile, fmt.Sprintf("%s", fmt.Sprintf(datamodels.JOB_SHIT["singularity_env"], cmd.CommandParams.SingularityPath, cmd.CommandParams.SingularityImage)))
 }
@@ -354,7 +365,7 @@ func writeStarCommandOptions(outfile *os.File, command datamodels.Command, sampl
 		if chunks[0] == "--outFileNamePrefix" {
 			opt = fmt.Sprintf("%s %s", chunks[0], fmt.Sprintf("%s/%s_", command.OutputPathPrefix, sample.Prefix))
 		} else if chunks[0] == "--readFilesIn" {
-			noExt := true
+			noExt := false
 			forwardReadFile := fmt.Sprintf("%s/%s", command.InputPathPrefix, sample.DumpForwardReadFile(noExt))
 			if sample.ReverseReadFile != "" {
 				reverseReadFile := fmt.Sprintf("%s/%s", command.InputPathPrefix, sample.DumpReverseReadFile(noExt))

@@ -1,0 +1,63 @@
+{
+	"job_details": {
+			"job_name": "YOUR_USERNAME_hisat_template"
+	},
+	"experiment_details": {
+			"pi": "Cricket",
+			"experiment_name": "merged",
+			"analysis_id": "03272021",
+			"sample_path": "/mnt/courses/biol2566/data",
+			"analysis_path": "/mnt/courses/biol2566/people/YOUR_USERNAME/analysis",
+			"workdir": null,
+			"samples_file": null,
+			"samples_file_type": null
+	},
+	"sge_preamble":{
+			"current_directory": true,
+			"join_output": true,
+			"email_address": "YOUR_EMAIL",
+			"shell": "/bin/bash",
+			"parallel_environment": "smp 16",
+			"memory": "virtual_free=4g"
+	},
+	"misc_preamble": [
+			"# *** ENVIRONMENT VARIABLES TO BE USED AT QSUB-SCRIPT LEVEL ONLY *** #",
+			"# *** DO NOT TRY TO REFERENCE THESE VARIABLES IN THE TRINITY COMMAND *** #",
+			"",
+			"# Top level course space",
+			"classdirectory='/mnt/courses/biol2566'",
+			""
+	],
+	"commands": [
+			{
+					"command": "hisat2",
+					"batch": false,
+					"tasks": 1,
+					"cpus": 3,
+					"memory": 128,
+					"singularity_path": "$classdirectory/software/sif",
+					"singularity_image": "hisat2_v2_1_0.sif",
+					"workdir": "/compbio",
+					"volumes": [
+							{
+									"host_path":"$classdirectory",
+									"container_path":"/compbio"
+							}
+					],
+					"options": [
+						"-q",
+						"-k 5", 
+						"--time",
+						"--summary-file /compbio/people/$USER/analysis/Cricket/normalized/03272021/HISAT2/norm.fq_ext_all_reads.normalized_K25_maxC30_minC1_maxCV10000.hisat2.aln.summary.txt",
+						"--no-sq",
+						"-p 32",
+						"-x /compbio/transformed/HISAT2/extavour/gryllus_bimaculatus/gryllus_bimaculatus",
+						"-1 /compbio/people/$USER/analysis/Cricket/normalized/03272021/Trinity/insilico_read_normalization_altogether/left.norm.fq_ext_all_reads.normalized_K25_maxC30_minC1_maxCV10000.fq",
+						"-2 /compbio/people/$USER/analysis/Cricket/normalized/03272021/Trinity/insilico_read_normalization_altogether/right.norm.fq_ext_all_reads.normalized_K25_maxC30_minC1_maxCV10000.fq"
+						"-S /compbio/people/$USER/analysis/Cricket/normalized/03272021/HISAT2/norm.fq_ext_all_reads.normalized_K25_maxC30_minC1_maxCV10000.sam"
+					],
+					"arguments": []
+			}
+	],
+	"cleanup": []
+}

@@ -111,7 +111,7 @@ func ParseJSONParams(filename string) (datamodels.Job, error) {
 	if err != nil {
 		return job, err
 	}
-	job.CleanupActions = cleanup
+	job.CleanUp = cleanup
 	return job, nil
 }
 
@@ -362,10 +362,10 @@ func experimentDetailsFromJSON(jsonParsed *gabs.Container) datamodels.Experiment
 		if experimentJSON.Exists("analysis_id") {
 			experimentDetails.AnalysisID = experimentJSON.Path("analysis_id").Data().(string)
 		}
-		if experimentJSON.Exists("sample_path") {
+		if experimentJSON.Exists("sample_path") && experimentJSON.Path("sample_path").Data() != nil {
 			experimentDetails.SamplePath = experimentJSON.Path("sample_path").Data().(string)
 		}
-		if experimentJSON.Exists("analysis_path") {
+		if experimentJSON.Exists("analysis_path") && experimentJSON.Path("analysis_path").Data() != nil {
 			experimentDetails.AnalysisPath = experimentJSON.Path("analysis_path").Data().(string)
 		}
 		if experimentJSON.Exists("workdir") && experimentJSON.Path("workdir").Data() != nil {
@@ -494,37 +494,49 @@ func volumesFromJSON(jsonParsed *gabs.Container) []datamodels.VolumeMount {
 	return volumes
 }
 
-func cleanupFromJSON(jsonParsed *gabs.Container) ([]datamodels.CleanupAction, error) {
-	var err error
-	var cleanupActions = make([]datamodels.CleanupAction, 0)
+// func cleanupFromJSON(jsonParsed *gabs.Container) ([]datamodels.CleanupAction, error) {
+// 	var err error
+// 	var cleanupActions = make([]datamodels.CleanupAction, 0)
+
+// 	if jsonParsed.Exists("cleanup") {
+// 		children := jsonParsed.Path("cleanup").Children()
+// 		for _, c := range children {
+// 			targets := c.Path("targets").Children()
+// 			for _, t := range targets {
+// 				cua := datamodels.CleanupAction{}
+// 				cua.ToolName = c.Path("tool_name").Data().(string)
+// 				cua.Action = c.Path("action").Data().(string)
+// 				if cua.Action != "rm" && cua.Action != "mv" && cua.Action != "cp" {
+// 					err = fmt.Errorf(`json template error: unsupported clean-up action "%s". Commander currently supports rm, mv and cp`, cua.Action)
+// 					return cleanupActions, err
+// 				}
+// 				// Source is expected for all cleanup actions.
+// 				cua.Source = t.Path("source").Data().(string)
+
+// 				// Destination is required for mv and cp actions.
+// 				if cua.Action == "mv" || cua.Action == "cp" {
+// 					if !t.Exists("destination") {
+// 						err = fmt.Errorf(`json template error: clean-up action "%s" is missing a destination argument`, cua.Action)
+// 						return cleanupActions, err
+// 					}
+// 					cua.Destination = t.Path("destination").Data().(string)
+// 				} else if t.Exists("destination") {
+// 					cua.Destination = t.Path("destination").Data().(string)
+// 				}
+// 				cleanupActions = append(cleanupActions, cua)
+// 			}
+// 		}
+// 	}
+// 	return cleanupActions, nil
+// }
+
+func cleanupFromJSON(jsonParsed *gabs.Container) ([]string, error) {
+	var cleanupActions = make([]string, 0)
 
 	if jsonParsed.Exists("cleanup") {
 		children := jsonParsed.Path("cleanup").Children()
 		for _, c := range children {
-			targets := c.Path("targets").Children()
-			for _, t := range targets {
-				cua := datamodels.CleanupAction{}
-				cua.ToolName = c.Path("tool_name").Data().(string)
-				cua.Action = c.Path("action").Data().(string)
-				if cua.Action != "rm" && cua.Action != "mv" && cua.Action != "cp" {
-					err = fmt.Errorf(`json template error: unsupported clean-up action "%s". Commander currently supports rm, mv and cp`, cua.Action)
-					return cleanupActions, err
-				}
-				// Source is expected for all cleanup actions.
-				cua.Source = t.Path("source").Data().(string)
-
-				// Destination is required for mv and cp actions.
-				if cua.Action == "mv" || cua.Action == "cp" {
-					if !t.Exists("destination") {
-						err = fmt.Errorf(`json template error: clean-up action "%s" is missing a destination argument`, cua.Action)
-						return cleanupActions, err
-					}
-					cua.Destination = t.Path("destination").Data().(string)
-				} else if t.Exists("destination") {
-					cua.Destination = t.Path("destination").Data().(string)
-				}
-				cleanupActions = append(cleanupActions, cua)
-			}
+			cleanupActions = append(cleanupActions, c.Data().(string))
 		}
 	}
 	return cleanupActions, nil
