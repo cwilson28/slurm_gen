@@ -115,6 +115,7 @@ func main() {
 	// Initialize experiment sample objects.
 	if job.ExperimentDetails.SamplesFile != "" {
 		samples := utils.ParseSamplesFile(job.ExperimentDetails.SamplesFile)
+		fmt.Printf("%+v\n", samples)
 		job.ExperimentDetails.Samples = samples
 
 		// Initialize all input paths for the samples.
